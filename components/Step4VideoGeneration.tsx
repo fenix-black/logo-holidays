@@ -80,8 +80,6 @@ const Step4VideoGeneration: React.FC<Step4VideoGenerationProps> = ({ image, holi
   }, [holiday, country, selectedStyle, handleVideoGeneration, t]);
 
   useEffect(() => {
-    // Reset the ref when dependencies change
-    requestInProgressRef.current = false;
     getInitialPromptAndVideo();
   }, [getInitialPromptAndVideo]);
 

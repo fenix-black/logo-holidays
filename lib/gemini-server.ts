@@ -23,7 +23,20 @@ export const fetchHolidays = async (country: string): Promise<Holiday[]> => {
     try {
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
-            contents: `List the top 8 most popular and visually distinct holidays in ${country}. For each, provide: the name in English (name_en), the name translated to Spanish (name_es), a brief one-sentence description in English (description_en), the description translated to Spanish (description_es), typical clothing, key 'daily used' elements/items, typical sound effects, typical music styles, and a boolean value indicating if the national flag is a prominent symbol of the celebration (e.g., true for Independence Day, false for Christmas).`,
+            contents: `You are a cultural expert and cinematographer. List the top 8 most popular and visually distinct holidays in ${country}. For each holiday, provide comprehensive details that would help create a professional video production.
+
+For each holiday, provide ALL of the following details:
+- The holiday name in both English and Spanish
+- A concise description of what the holiday celebrates
+- VISUAL DETAILS: Traditional clothing, decorations, props, and visual symbols
+- LOCATIONS: Typical celebration venues (e.g., "town squares", "family homes", "beaches")
+- TIMING: When celebrations typically occur (time of day/night)
+- ACTIVITIES: Key rituals, dances, or traditional activities
+- COLOR PALETTE: Traditional colors associated with this holiday
+- AUDIO: Traditional music styles and ambient sounds
+- FLAG USAGE: Whether the national flag is prominently featured
+
+Focus on authentic cultural details that would help a cinematographer create accurate, respectful scenes.`,
             config: {
                 responseMimeType: "application/json",
                 responseSchema: {
@@ -38,11 +51,16 @@ export const fetchHolidays = async (country: string): Promise<Holiday[]> => {
                                     name_es: { type: Type.STRING, description: 'The name of the holiday in Spanish.' },
                                     description_en: { type: Type.STRING, description: 'A brief, one-sentence description of the holiday in English.' },
                                     description_es: { type: Type.STRING, description: 'A brief, one-sentence description of the holiday in Spanish.' },
-                                    clothing: { type: Type.STRING, description: 'A brief description of typical, traditional clothing worn for this specific holiday in this country.' },
-                                    elements: { type: Type.STRING, description: 'A brief list of typical daily-used items or elements and their purpose.' },
-                                    flagIsProminent: { type: Type.BOOLEAN, description: 'A boolean indicating if the country flag is a prominent and commonly used symbol in this celebration.' },
-                                    soundEffects: { type: Type.STRING, description: 'A brief list of typical sound effects associated with the holiday (e.g., "fireworks, bells").' },
-                                    musicStyles: { type: Type.STRING, description: 'A brief list of typical music styles or genres for the holiday (e.g., "folk music, festive orchestral").' },
+                                    clothing: { type: Type.STRING, description: 'Detailed description of traditional clothing and costumes worn for this holiday.' },
+                                    elements: { type: Type.STRING, description: 'Key decorative elements, props, and objects used in celebrations.' },
+                                    visualSymbols: { type: Type.STRING, description: 'Important visual symbols and motifs (e.g., "candles, stars, religious icons").' },
+                                    locations: { type: Type.STRING, description: 'Typical venues where celebrations occur (e.g., "cathedral steps, beach bonfires, city plazas").' },
+                                    timeOfDay: { type: Type.STRING, description: 'When key celebrations happen (e.g., "midnight mass", "sunrise ceremony", "evening parade").' },
+                                    activities: { type: Type.STRING, description: 'Traditional activities and rituals (e.g., "lighting candles, folk dancing, firework displays").' },
+                                    colorPalette: { type: Type.STRING, description: 'Traditional colors associated with this holiday (e.g., "red and gold", "purple and white").' },
+                                    flagIsProminent: { type: Type.BOOLEAN, description: 'Boolean indicating if the national flag is a prominent symbol in this celebration.' },
+                                    soundEffects: { type: Type.STRING, description: 'Typical ambient sounds and effects (e.g., "church bells, fireworks, ocean waves").' },
+                                    musicStyles: { type: Type.STRING, description: 'Traditional music genres and instruments (e.g., "mariachi bands, steel drums, bagpipes").' },
                                 },
                             },
                         },
@@ -103,13 +121,40 @@ export const generateHolidayImage = async (
             ? `The overall mood and aesthetic must be strongly influenced by this guiding style: **${style}**.`
             : `The style should be a standard, photorealistic festive representation.`;
 
-        const textPrompt = `Create a beautiful, festive scene celebrating '${holiday.name_en}' in ${country}. The holiday is about: "${holiday.description_en}". Incorporate these cultural details: Key elements are "${holiday.elements}". The scene's style should complement the logo's style: '${logoAnalysis}'. The scene must be professional, with cinematic lighting. ${styleInstruction} If any people are depicted, it is crucial that their faces are realistic, credible, and express emotions fitting for the celebration. Avoid any facial distortions or uncanny valley effects. The scene must not include any children.
-CRITICAL INSTRUCTIONS:
-1.  **ASPECT RATIO**: The final image MUST have a 16:9 aspect ratio (landscape).
-2.  **LOGO INTEGRITY**: The primary goal is to integrate the provided logo. It is MANDATORY that the logo is displayed prominently and clearly, preserving its original shape, colors, and proportions with perfect accuracy. DO NOT alter, redraw, or reinterpret the logo in any way. Treat it as a fixed asset to be placed within the scene.
-3.  **CULTURAL ATTIRE**: If people are shown, their clothing must be the authentic, traditional attire for '${holiday.name_en}' in ${country}, as described here: "${holiday.clothing}". Do NOT adapt, alter, or stylize the clothing to match the logo. Cultural authenticity is the highest priority.
-4.  ${flagInstruction}
-5.  **CANVAS CONFORMITY**: The generated image MUST exactly fit the dimensions of the provided blank canvas (the second image). Use the blank canvas as your size and aspect ratio template - the output image must match its exact dimensions and 16:9 aspect ratio.`;
+        const textPrompt = `Create a cinematic, professional scene celebrating '${holiday.name_en}' in ${country}. 
+
+SCENE COMPOSITION:
+- Setting: ${holiday.locations} during ${holiday.timeOfDay}
+- Activities: Show ${holiday.activities} in progress
+- Visual Elements: Feature ${holiday.visualSymbols} and ${holiday.elements}
+- Color Palette: Use ${holiday.colorPalette} as the dominant color scheme
+- Style: The scene should complement the logo's style: '${logoAnalysis}'
+- Mood: ${styleInstruction}
+
+CRITICAL REQUIREMENTS:
+1. **ASPECT RATIO**: The final image MUST have a 16:9 aspect ratio (landscape format).
+
+2. **LOGO INTEGRATION**: The brand logo is the HERO element. It MUST be:
+   - Displayed prominently and clearly visible
+   - Preserved with 100% accuracy - original shape, colors, and proportions
+   - NOT altered, redrawn, or reinterpreted in any way
+   - Integrated naturally into the scene (e.g., on banners, projections, or displays)
+
+3. **CULTURAL AUTHENTICITY**:
+   - Location must reflect: ${holiday.locations}
+   - Time setting must be: ${holiday.timeOfDay}
+   - If people are shown, they MUST wear: "${holiday.clothing}"
+   - Cultural elements must be accurate and respectful
+
+4. **VISUAL QUALITY**:
+   - Cinematic lighting appropriate for ${holiday.timeOfDay}
+   - Professional composition with depth and atmosphere
+   - If people are depicted, faces must be realistic with natural expressions
+   - NO children in the scene
+
+5. ${flagInstruction}
+
+6. **CANVAS CONFORMITY**: The output MUST match the exact 16:9 dimensions of the provided blank canvas template.`;
         
         // Create a blank 16:9 canvas to enforce aspect ratio
         const blankCanvas = blankCanvasB64 && blankCanvasMimeType 
@@ -157,69 +202,193 @@ CRITICAL INSTRUCTIONS:
 const VIDEO_PROMPT_SCHEMA = {
     type: Type.OBJECT,
     properties: {
-        overall_mood: { type: Type.STRING, description: `Describe the overall mood. e.g., 'Festive and magical', 'Patriotic and proud'.` },
+        overall_treatment: { 
+            type: Type.STRING, 
+            description: `Overall creative treatment and mood for the entire 8-second video (e.g., 'Cinematic patriotic celebration with warm golden tones', 'Magical winter wonderland with ethereal atmosphere').` 
+        },
         scenes: {
             type: Type.ARRAY,
-            description: "An array of scenes that describe the video progression.",
+            description: "EXACTLY 2 scenes for the 8-second video. Scene 1: 0-4 seconds, Scene 2: 4-8 seconds.",
+            minItems: 2,
+            maxItems: 2,
             items: {
                 type: Type.OBJECT,
                 properties: {
-                    scene_description: { type: Type.STRING, description: "What happens in this scene, focusing on the logo and festive interactions." },
-                    logo_animation: {
+                    shot: {
                         type: Type.OBJECT,
                         properties: {
-                            animation: { type: Type.STRING, description: "How the logo creatively animates or interacts in this scene (e.g., 'A firework bursts revealing the logo')." },
-                            sound_effect: { type: Type.STRING, description: "Sound effect for the logo's action. (e.g., 'subtle shimmer', 'magical reveal whoosh')." }
+                            composition: { type: Type.STRING, description: "Camera framing and lens choice (e.g., 'Wide establishing shot, 24mm lens', 'Extreme close-up on logo, 85mm macro lens')." },
+                            camera_motion: { type: Type.STRING, description: "Camera movement description (e.g., 'Slow dolly-in', 'Smooth crane shot ascending', 'Static tripod shot', 'Handheld following action')." },
+                            frame_rate: { type: Type.STRING, description: "Frame rate for the shot (e.g., '24fps for cinematic', '60fps for slow-motion reveal', '30fps standard')." },
+                            depth_of_field: { type: Type.STRING, description: "Focus characteristics (e.g., 'Shallow DOF with bokeh background', 'Deep focus keeping all elements sharp', 'Rack focus from foreground to logo')." }
                         },
-                        required: ["animation", "sound_effect"]
+                        required: ["composition", "camera_motion", "frame_rate", "depth_of_field"]
                     },
-                    element_animations: {
-                        type: Type.ARRAY,
-                        description: "Animations of other elements in the scene.",
-                        items: {
-                            type: Type.OBJECT,
-                            properties: {
-                                element: { type: Type.STRING, description: "The scene element to animate (e.g., 'fireworks', 'confetti')." },
-                                animation: { type: Type.STRING, description: "The animation description for this element." },
-                                sound_effect: { type: Type.STRING, description: "Sound effect for this animation (e.g., 'firework explosion', 'confetti rustle')." }
-                            },
-                            required: ["element", "animation", "sound_effect"]
-                        }
+                    subject: {
+                        type: Type.OBJECT,
+                        properties: {
+                            people: { type: Type.STRING, description: "Description of any people in the scene including age, ethnicity, and appearance. NULL if no people." },
+                            wardrobe: { type: Type.STRING, description: "Traditional holiday attire and costume details. NULL if no people." },
+                            character_actions: { type: Type.STRING, description: "What the people are doing (e.g., 'dancing traditional folk dance', 'lighting candles'). NULL if no people." }
+                        },
+                        required: ["people", "wardrobe", "character_actions"]
                     },
-                    transition_to_next_scene: { type: Type.STRING, description: "Description of the transition to the next scene (e.g., 'quick fade to white', 'sparkle wipe'). Null for the last scene." }
+                    scene: {
+                        type: Type.OBJECT,
+                        properties: {
+                            location: { type: Type.STRING, description: "Where the scene takes place (e.g., 'Town square with colonial architecture', 'Modern living room decorated for holidays')." },
+                            time_of_day: { type: Type.STRING, description: "Time setting (e.g., 'Golden hour sunset', 'Midnight fireworks', 'Dawn breaking')." },
+                            environment: { type: Type.STRING, description: "Environmental details and atmosphere (e.g., 'Snow gently falling, warm window lights glowing', 'Confetti floating in air, festive banners swaying')." }
+                        },
+                        required: ["location", "time_of_day", "environment"]
+                    },
+                    logo_integration: {
+                        type: Type.OBJECT,
+                        properties: {
+                            placement: { type: Type.STRING, description: "CRITICAL: Where the logo stays CONTINUOUSLY VISIBLE throughout the entire scene (e.g., 'Fixed center frame on solid banner', 'Persistent upper third as part of architectural element', 'Mounted on visible flagpole throughout'). Logo must NEVER exit, fade, or be obscured. Keep it REALISTIC - no floating logos." },
+                            animation: { type: Type.STRING, description: "REALISTIC logo movement WHILE REMAINING VISIBLE (e.g., 'Gentle sway with banner in breeze', 'Stable with natural light reflections', 'Slight perspective shift with camera'). AVOID: magical glows, supernatural pulsing, fading, dissolving, or unrealistic effects. Keep it NATURAL and PHYSICAL." },
+                            interaction: { type: Type.STRING, description: "How scene elements REALISTICALLY interact with the ALWAYS-VISIBLE logo (e.g., 'Natural shadows cast across logo surface', 'Confetti physically falls in front and behind', 'Reflected in wet surfaces'). NO magical particles, ethereal glows, or supernatural effects." }
+                        },
+                        required: ["placement", "animation", "interaction"]
+                    },
+                    visual_details: {
+                        type: Type.OBJECT,
+                        properties: {
+                            primary_action: { type: Type.STRING, description: "Main action happening in the scene (e.g., 'Fireworks exploding in synchronized patterns', 'Traditional dancers circling the plaza')." },
+                            props: { type: Type.STRING, description: "Key props and objects visible (e.g., 'Ornate candelabras, flower garlands, traditional instruments', 'National flag, festive banners')." },
+                            physics: { type: Type.STRING, description: "Physical dynamics and particle effects (e.g., 'Confetti drifting on warm breeze', 'Sparklers leaving light trails', 'Fabric rippling in wind')." },
+                            holiday_elements: { type: Type.STRING, description: "Specific holiday symbols and decorations featured prominently in this scene." }
+                        },
+                        required: ["primary_action", "props", "physics", "holiday_elements"]
+                    },
+                    cinematography: {
+                        type: Type.OBJECT,
+                        properties: {
+                            lighting: { type: Type.STRING, description: "Lighting setup and quality (e.g., 'Warm golden key light from sunset, blue fill from twilight sky', 'Dramatic rim lighting with lens flares')." },
+                            color_grading: { type: Type.STRING, description: "Color treatment (e.g., 'Warm amber tones with teal shadows', 'Desaturated with selective color on logo', 'Vibrant festival colors')." },
+                            visual_tone: { type: Type.STRING, description: "Overall visual mood (e.g., 'Nostalgic and warm', 'Epic and grand', 'Intimate and cozy', 'Energetic and vibrant')." }
+                        },
+                        required: ["lighting", "color_grading", "visual_tone"]
+                    },
+                    audio: {
+                        type: Type.OBJECT,
+                        properties: {
+                            music_style: { type: Type.STRING, description: "CONTINUOUS music that flows across the entire 8-second video (e.g., 'Sustained orchestral celebration theme', 'Continuous traditional folk melody', 'Uninterrupted festive anthem'). Do NOT specify starts/stops - music plays throughout." },
+                            primary_sounds: { type: Type.STRING, description: "Sound effects that LAYER OVER the continuous music (e.g., 'Firework bursts over music', 'Crowd cheers blending with soundtrack', 'Bells accenting the melody')." },
+                            ambient: { type: Type.STRING, description: "Environmental sounds that ADD TO the music bed (e.g., 'Gentle crowd murmur beneath music', 'Soft wind ambience under soundtrack', 'Distant celebration atmosphere')." },
+                            logo_sound: { type: Type.STRING, description: "REALISTIC, SUBTLE sound for logo interactions (e.g., 'Fabric rustling as banner moves', 'Soft wooden creak', 'Natural wind whoosh'). AVOID magical/fantasy sounds. Must blend naturally with continuous music." }
+                        },
+                        required: ["music_style", "primary_sounds", "ambient", "logo_sound"]
+                    },
+                    transition: {
+                        type: Type.OBJECT,
+                        properties: {
+                            type: { type: Type.STRING, description: "QUICK transition to Scene 2 (e.g., 'Instant cut', 'Fast cross-dissolve', 'Quick match cut on logo'). NULL for Scene 2 (last scene). Avoid slow transitions in 8-second format." },
+                            duration: { type: Type.STRING, description: "MUST be under 0.5 seconds for 8-second video (e.g., '0.2 second cut', '0.3 second dissolve', 'Instant'). NULL for Scene 2 (last scene)." }
+                        },
+                        required: ["type", "duration"]
+                    }
                 },
-                required: ["scene_description", "logo_animation", "element_animations", "transition_to_next_scene"]
+                required: ["shot", "subject", "scene", "logo_integration", "visual_details", "cinematography", "audio", "transition"]
             }
         }
     },
-    required: ["overall_mood", "scenes"]
+    required: ["overall_treatment", "scenes"]
 };
 
 export const generateVideoPromptJson = async (holiday: Holiday, country: string, style: string): Promise<string> => {
     try {
         const flagInstruction = holiday.flagIsProminent
-            ? `If the flag of ${country} is animated, it must be depicted with 100% accuracy, without alteration. Treat national symbols with respect.`
-            : `The flag of ${country} is not used in this celebration and must NOT be included in the animation.`;
+            ? `The flag of ${country} is a KEY SYMBOL for this holiday and MUST be featured prominently with 100% accuracy in props and visual elements.`
+            : `The flag of ${country} is NOT traditionally used in this celebration and should NOT be included in any scene.`;
         
         const styleInstruction = style !== 'Default'
-            ? `The animation's overall mood and style MUST be **${style}**. Adapt all scene descriptions and animations to reflect this style.`
-            : `The animation should have a standard festive and cinematic mood.`;
+            ? `ALL cinematography choices, color grading, and visual tone MUST reflect a **${style}** aesthetic throughout every scene. Adapt the traditional color palette of "${holiday.colorPalette}" to align with the ${style} style.`
+            : `Use the traditional color palette of "${holiday.colorPalette}" with standard festive cinematography.`;
 
         const response = await ai.models.generateContent({
             model: "gemini-2.5-pro",
-            contents: `Create a detailed, creative JSON prompt for the Veo 3.0 video model to animate an image celebrating '${holiday.name_en}' in ${country}. The holiday is about: "${holiday.description_en}".
+            contents: `You are an award-winning cinematographer creating a shot list for an 8-SECOND premium brand holiday video. Generate a cinematic JSON prompt for the Veo 3.0 video model to animate an image celebrating '${holiday.name_en}' in ${country}.
+
+⏱️ CRITICAL TIMING CONSTRAINT: Total video duration is EXACTLY 8 SECONDS
+
+PRODUCTION BRIEF:
+Holiday: "${holiday.name_en}" - ${holiday.description_en}
+Location: ${country}
+Duration: 8 seconds total
+Brand Focus: Logo MUST be clearly visible in EVERY SINGLE FRAME
+
+CULTURAL REFERENCE:
+- Traditional Locations: ${holiday.locations}
+- Time Settings: ${holiday.timeOfDay}
+- Key Activities: ${holiday.activities}
+- Visual Symbols: ${holiday.visualSymbols}
+- Decorative Elements: ${holiday.elements}
+- Color Palette: ${holiday.colorPalette}
+- Traditional Wardrobe: ${holiday.clothing}
+- Soundscape: ${holiday.soundEffects}
+- Music: ${holiday.musicStyles}
+
+CREATIVE DIRECTION:
 ${styleInstruction}
-The animation must incorporate these cultural details:
-- Key festive elements: "${holiday.elements}".
-- Contextual audio: Typical sound effects are "${holiday.soundEffects}" and typical music styles are "${holiday.musicStyles}". Use this to inform your sound effect choices and the overall mood.
 
-Structure it as a sequence of scenes with transitions. The JSON must make the brand logo the central focus, detailing its interaction with the festive elements. For each animation, describe an accompanying sound effect (no dialogue). Do not include camera movements or duration.
+🎬 MANDATORY REQUIREMENTS FOR 8-SECOND VIDEO:
 
-IMPORTANT RULES:
-1.  If people are included, ensure they have natural, fluid movements, including subtle changes in facial expressions that are appropriate to the scene's mood.
-2.  The clothing for any depicted people must be the traditional, authentic attire for '${holiday.name_en}' in ${country}, as described here: "${holiday.clothing}". It must NOT be stylized to match the logo.
-3.  ${flagInstruction}
-The final output must be a valid JSON object only, conforming to the provided schema.`,
+1. SCENE COUNT: Create EXACTLY 2 SCENES
+   - Scene 1: 0-4 seconds (Establishing shot with logo introduction)
+   - Scene 2: 4-8 seconds (Climactic celebration with logo prominence)
+   - Transition between scenes should be smooth and quick (under 0.5 seconds)
+
+2. LOGO VISIBILITY & REALISM - ABSOLUTELY CRITICAL:
+   ⚠️ The brand logo MUST be CLEARLY VISIBLE in EVERY SINGLE FRAME of both scenes
+   - Logo must appear on PHYSICAL OBJECTS (banners, flags, signs, buildings) - NO floating logos
+   - Scene 1: Logo visible from first 0.5 seconds and REMAINS throughout
+   - Scene 2: Logo continues visibility, NEVER leaves frame
+   - REALISTIC animations only: natural movement with wind, camera perspective, lighting changes
+   - PROHIBITED: Magical glowing, supernatural pulsing, ethereal effects, fading in/out, dissolving
+   - Keep logo integration GROUNDED in physical reality
+
+3. CINEMATOGRAPHY FOR SHORT FORMAT:
+   - Avoid overly complex camera moves that take too long
+   - Use establishing shots that immediately show context (no slow reveals)
+   - Frame rates: 24fps for standard, 48-60fps ONLY for specific slow-mo moments
+   - Keep depth of field consistent within scenes for clarity
+
+4. AUDIO CONTINUITY FOR 8 SECONDS:
+   - Music: Use ONE continuous musical phrase that spans the full 8 seconds
+   - DO NOT specify "music starts" or "music ends" - it should flow throughout
+   - Describe the music as a sustained mood (e.g., "Continuous festive ${holiday.musicStyles} melody throughout")
+   - Sound effects should layer OVER the continuous music, not interrupt it
+   - Logo sound should be subtle and not overpower the music continuity
+
+5. SCENE LOCATIONS & TIMING:
+   - Choose the MOST iconic location from: ${holiday.locations}
+   - Set at peak celebration time: ${holiday.timeOfDay}
+   - Both scenes can be in same location with different angles/perspectives
+
+6. CULTURAL ELEMENTS & PHYSICAL REALISM:
+   - Feature the MOST recognizable activity from: ${holiday.activities}
+   - Include the MOST important symbols from: ${holiday.visualSymbols}
+   - ${flagInstruction}
+   - FLAGS & SYMBOLS: Must behave REALISTICALLY - natural fabric movement, proper physics
+   - PROHIBITED on flags/symbols: Magical glows, supernatural auras, ethereal effects
+   - All elements should exist in PHYSICAL SPACE with real-world physics
+
+7. NARRATIVE ARC FOR 8 SECONDS:
+   - Scene 1 (0-4 sec): Establish celebration atmosphere, introduce logo prominently
+   - Scene 2 (4-8 sec): Peak festive moment with logo as hero element
+   - The story should feel complete despite being brief
+
+8. VISUAL EFFECTS PHILOSOPHY - KEEP IT REAL:
+   ✅ ENCOURAGED: Natural lighting, real shadows, physical reflections, authentic weather effects, practical camera work
+   ❌ PROHIBITED: Magical particles, supernatural glows on realistic objects, ethereal auras, fantasy effects on logos/flags, objects materializing from nothing, unrealistic transformations
+   - Think "high-end commercial" NOT "fantasy film"
+   - All visual effects should be achievable with real cameras and practical effects
+   - Logos and flags are PHYSICAL OBJECTS that obey laws of physics
+
+Remember: This is a REALISTIC 8-second celebration video where the logo must NEVER leave the frame. Every effect should be grounded in physical reality.
+
+Output a valid JSON object using proper film production terminology.`,
             config: {
                 responseMimeType: "application/json",
                 responseSchema: VIDEO_PROMPT_SCHEMA,
@@ -241,16 +410,47 @@ export const refineVideoPromptJson = async (currentJson: string, userInstruction
     try {
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
-            contents: `You are an expert video animation script editor. Your task is to modify a JSON animation script based on a user's instructions.
-User's Instructions: "${userInstructions}"
+            contents: `You are a professional cinematographer editing an 8-SECOND holiday video shot list. Your task is to modify the JSON based on the director's notes while maintaining strict requirements.
 
-Current JSON Script:
+Director's Notes: "${userInstructions}"
+
+Current Shot List JSON:
 ${currentJson}
 
-Please apply the user's instructions to the current JSON script and return the new, updated JSON object.
-- The structure of the JSON must remain valid and conform to the original schema.
-- Only change what is requested. Preserve the rest of the script.
-- Ensure the output is a single, valid JSON object and nothing else.`,
+⚠️ CRITICAL CONSTRAINTS (MUST NOT BE VIOLATED):
+1. **Duration**: Video is EXACTLY 8 seconds - maintain 2 scenes only
+2. **Logo Visibility**: Logo MUST remain visible in EVERY FRAME, on PHYSICAL objects (no floating logos)
+3. **Audio Continuity**: Music must be ONE continuous phrase across 8 seconds
+4. **Realism**: NO magical glows, supernatural effects, or fantasy elements on logos/flags
+5. **Physics**: All elements must obey real-world physics (natural movement, gravity, wind)
+
+EDITING GUIDELINES:
+1. Apply the director's notes precisely to relevant sections
+2. Maintain exactly 2 scenes (do not add or remove scenes)
+3. PRESERVE logo visibility in every frame - if notes affect logo placement, ensure it remains constantly visible
+4. Keep professional cinematography terminology
+5. If audio changes are requested, maintain continuity (no abrupt starts/stops)
+6. Cultural authenticity must remain intact
+
+SCHEMA REFERENCE:
+- overall_treatment: Overall creative vision for the 8-second piece
+- scenes[]: EXACTLY 2 scene objects, each containing:
+  - shot: Camera composition, motion, frame rate, depth of field
+  - subject: People, wardrobe, character actions (can be null)
+  - scene: Location, time of day, environment  
+  - logo_integration: Placement (MUST be visible entire scene), animation, interaction
+  - visual_details: Primary action, props, physics, holiday elements
+  - cinematography: Lighting, color grading, visual tone
+  - audio: Continuous music style, layered sounds, ambient, subtle logo sound
+  - transition: Quick transition (<0.5 sec) between scenes, null for scene 2
+
+VALIDATION CHECKLIST:
+✓ Still exactly 2 scenes?
+✓ Logo visible in every frame of both scenes?
+✓ Audio described as continuous across 8 seconds?
+✓ Transitions under 0.5 seconds?
+
+Apply the requested changes while maintaining these constraints. Return the updated JSON object only.`,
             config: {
                 responseMimeType: "application/json",
                 responseSchema: VIDEO_PROMPT_SCHEMA,
@@ -271,7 +471,7 @@ Please apply the user's instructions to the current JSON script and return the n
 export const generateVideo = async (imageB64: string, imageMimeType: string, prompt: string): Promise<string> => {
     try {
         let operation = await ai.models.generateVideos({
-            model: 'veo-3.0-generate-001', //veo-3.0-fast-generate-001',
+            model: 'veo-3.0-fast-generate-001', //veo-3.0-fast-generate-001',
             prompt: prompt,
             image: {
                 imageBytes: imageB64,
@@ -280,7 +480,7 @@ export const generateVideo = async (imageB64: string, imageMimeType: string, pro
             config: {
                 aspectRatio: "16:9", 
                 numberOfVideos: 1,
-                negativePrompt: "low quality, pixelated, deformed logo, distorted flags, deformed"
+                negativePrompt: "low quality, pixelated, blurry, deformed logo, distorted logo, logo disappearing, logo fading out, logo leaving frame, obscured logo, hidden logo, warped branding, incorrect flag colors, inverted flag, distorted national symbols, deformed faces, uncanny valley, creepy expressions, distorted hands, extra limbs, morphing objects, inconsistent lighting, jarring transitions, abrupt cuts, audio desync, flickering, glitchy effects, culturally inaccurate clothing, wrong traditional attire, inappropriate gestures, child-like features, oversaturated, washed out colors, amateur composition, shaky camera, motion blur on logo, text artifacts, watermarks, inappropriate content"
             }
         });
 

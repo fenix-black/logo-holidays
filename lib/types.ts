@@ -5,6 +5,11 @@ export interface Holiday {
   description_es: string;
   clothing: string;
   elements: string;
+  visualSymbols: string;
+  locations: string;
+  timeOfDay: string;
+  activities: string;
+  colorPalette: string;
   flagIsProminent: boolean;
   soundEffects: string;
   musicStyles: string;
