@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, ChangeEvent } from 'react';
+import React, { useState, useCallback, useEffect, ChangeEvent } from 'react';
 import { fileToBase64 } from '@/lib/api-client';
 import type { ImageDetails } from '@/lib/types';
 import { ArrowRightIcon } from '@/components/icons/ArrowRightIcon';
@@ -22,6 +22,7 @@ const Step1LogoCountry: React.FC<Step1LogoCountryProps> = ({ onNext }) => {
     if (file) {
       if (file.size > 4 * 1024 * 1024) { // 4MB limit for inline data
         setError(t('step1.error.largeFile'));
+        event.target.value = ''; // Reset input to allow re-selecting
         return;
       }
       
@@ -29,15 +30,45 @@ const Step1LogoCountry: React.FC<Step1LogoCountryProps> = ({ onNext }) => {
       const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
       if (!allowedTypes.includes(file.type)) {
         setError(t('step1.error.invalidFormat'));
+        event.target.value = ''; // Reset input to allow re-selecting
         return;
       }
       
       setError(null);
-      setLogoPreview(URL.createObjectURL(file));
-      const details = await fileToBase64(file);
-      setLogoDetails(details);
+      
+      // Revoke previous object URL if it exists
+      if (logoPreview) {
+        URL.revokeObjectURL(logoPreview);
+      }
+      
+      const newPreviewUrl = URL.createObjectURL(file);
+      setLogoPreview(newPreviewUrl);
+      
+      try {
+        const details = await fileToBase64(file);
+        setLogoDetails(details);
+      } catch (err) {
+        console.error('Failed to process image:', err);
+        setError(t('step1.error.processingFailed') || 'Failed to process image. Please try again.');
+        // Clean up preview if base64 conversion failed
+        URL.revokeObjectURL(newPreviewUrl);
+        setLogoPreview(null);
+        setLogoDetails(null);
+      }
     }
-  }, [t]);
+    
+    // Reset input value to allow re-selecting the same file
+    event.target.value = '';
+  }, [t, logoPreview]);
+
+  // Clean up object URL when component unmounts or preview changes
+  useEffect(() => {
+    return () => {
+      if (logoPreview) {
+        URL.revokeObjectURL(logoPreview);
+      }
+    };
+  }, [logoPreview]);
 
   const handleNext = () => {
     if (logoDetails) {

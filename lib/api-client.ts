@@ -10,11 +10,21 @@ export const fileToBase64 = (file: File): Promise<{ b64: string; mimeType: strin
     reader.readAsDataURL(file);
     reader.onload = () => {
       const result = reader.result as string;
+      if (!result) {
+        reject(new Error('Failed to read file content'));
+        return;
+      }
       const b64 = result.split(',')[1];
       const mimeType = result.split(';')[0].split(':')[1];
+      if (!b64 || !mimeType) {
+        reject(new Error('Invalid file format'));
+        return;
+      }
       resolve({ b64, mimeType });
     };
-    reader.onerror = (error) => reject(error);
+    reader.onerror = () => {
+      reject(new Error('Failed to read file. Please try again with a different image.'));
+    };
   });
 };
 

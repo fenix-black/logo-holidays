@@ -84,11 +84,11 @@ Focus on authentic cultural details that would help a cinematographer create acc
 export const analyzeLogoStyle = async (logoB64: string, logoMimeType: string): Promise<string> => {
     try {
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-2.5-pro",
             contents: {
                 parts: [
                     { inlineData: { data: logoB64, mimeType: logoMimeType } },
-                    { text: "Analyze the provided logo. Describe its style (e.g., modern, minimalist, vintage, playful), color palette, and overall theme in a concise phrase of 10-15 words." },
+                    { text: "Analyze the provided logo. Describe its style (e.g., modern, minimalist, vintage, playful), color palette, and overall theme in a concise phrase of 15-20 words." },
                 ],
             },
         });
