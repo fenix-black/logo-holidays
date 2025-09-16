@@ -8,6 +8,92 @@ if (!process.env.GEMINI_API_KEY) {
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 /**
+ * Cache for holiday details to avoid redundant API calls
+ * Key format: "${country}::${holidayName}"
+ * Value: { data: Holiday, timestamp: number }
+ */
+const holidayDetailsCache = new Map<string, { data: Holiday, timestamp: number }>();
+const CACHE_TTL = 3600000; // 1 hour in milliseconds
+const MAX_CACHE_SIZE = 50; // Maximum number of cached entries
+
+/**
+ * Helper function to manage cache size using LRU eviction
+ */
+const evictOldestCacheEntry = (): void => {
+    if (holidayDetailsCache.size < MAX_CACHE_SIZE) return;
+    
+    // Find the oldest entry by timestamp
+    let oldestKey: string | null = null;
+    let oldestTime = Date.now();
+    
+    // Convert to array to avoid iteration issues
+    const entries = Array.from(holidayDetailsCache.entries());
+    for (const [key, value] of entries) {
+        if (value.timestamp < oldestTime) {
+            oldestTime = value.timestamp;
+            oldestKey = key;
+        }
+    }
+    
+    if (oldestKey) {
+        holidayDetailsCache.delete(oldestKey);
+        console.log(`Cache evicted oldest entry: ${oldestKey}`);
+    }
+};
+
+/**
+ * Gets holiday details from cache or fetches them if not cached/expired
+ */
+const getCachedOrFetchHolidayDetails = async (country: string, holidayName: string): Promise<Holiday> => {
+    const cacheKey = `${country}::${holidayName}`;
+    const cached = holidayDetailsCache.get(cacheKey);
+    
+    // Check if we have a valid cached entry
+    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+        console.log(`✓ Using cached holiday details for: ${cacheKey}`);
+        return cached.data;
+    }
+    
+    // If cache is expired or doesn't exist, fetch fresh data
+    console.log(`↻ Fetching fresh holiday details for: ${cacheKey}`);
+    const details = await fetchHolidayDetails(country, holidayName);
+    
+    // Evict oldest entry if cache is full
+    evictOldestCacheEntry();
+    
+    // Store in cache
+    holidayDetailsCache.set(cacheKey, {
+        data: details,
+        timestamp: Date.now()
+    });
+    
+    console.log(`✓ Cached holiday details for: ${cacheKey} (cache size: ${holidayDetailsCache.size}/${MAX_CACHE_SIZE})`);
+    return details;
+};
+
+/**
+ * Utility function to clear the holiday details cache
+ * Useful for testing or when data needs to be refreshed
+ */
+export const clearHolidayDetailsCache = (): void => {
+    const size = holidayDetailsCache.size;
+    holidayDetailsCache.clear();
+    console.log(`Cache cleared. Removed ${size} entries.`);
+};
+
+/**
+ * Get cache statistics for debugging
+ */
+export const getHolidayDetailsCacheStats = (): { size: number; maxSize: number; ttlMinutes: number; entries: string[] } => {
+    return {
+        size: holidayDetailsCache.size,
+        maxSize: MAX_CACHE_SIZE,
+        ttlMinutes: CACHE_TTL / 60000,
+        entries: Array.from(holidayDetailsCache.keys())
+    };
+};
+
+/**
  * Creates a minimal blank PNG image using a pre-generated base64 string
  * This is a 16x9 (16:9 aspect ratio) transparent PNG that Gemini uses as aspect ratio reference
  * @returns An object with the base64 string and mimeType.
@@ -19,24 +105,21 @@ const createBlankImageB64 = (): { b64: string; mimeType: string } => {
     return { b64, mimeType: 'image/png' };
 };
 
-export const fetchHolidays = async (country: string): Promise<Holiday[]> => {
+/**
+ * Fetches a simplified list of holidays with only names and descriptions.
+ * This is Phase 1 of the 2-phase approach - fast loading for the selection UI.
+ */
+export const fetchHolidayList = async (country: string): Promise<Holiday[]> => {
     try {
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
-            contents: `You are a cultural expert and cinematographer. List the top 8 most popular and visually distinct holidays in ${country}. For each holiday, provide comprehensive details that would help create a professional video production.
+            contents: `You are a cultural expert. List the top 8 most popular and visually distinct holidays celebrated in ${country}.
 
-For each holiday, provide ALL of the following details:
+For each holiday, provide ONLY:
 - The holiday name in both English and Spanish
-- A concise description of what the holiday celebrates
-- VISUAL DETAILS: Traditional clothing, decorations, props, and visual symbols
-- LOCATIONS: Typical celebration venues (e.g., "town squares", "family homes", "beaches")
-- TIMING: When celebrations typically occur (time of day/night)
-- ACTIVITIES: Key rituals, dances, or traditional activities
-- COLOR PALETTE: Traditional colors associated with this holiday
-- AUDIO: Traditional music styles and ambient sounds
-- FLAG USAGE: Whether the national flag is prominently featured
+- A brief, one-sentence description of what the holiday celebrates in both English and Spanish
 
-Focus on authentic cultural details that would help a cinematographer create accurate, respectful scenes.`,
+Focus on the most culturally significant and visually interesting celebrations.`,
             config: {
                 responseMimeType: "application/json",
                 responseSchema: {
@@ -51,16 +134,6 @@ Focus on authentic cultural details that would help a cinematographer create acc
                                     name_es: { type: Type.STRING, description: 'The name of the holiday in Spanish.' },
                                     description_en: { type: Type.STRING, description: 'A brief, one-sentence description of the holiday in English.' },
                                     description_es: { type: Type.STRING, description: 'A brief, one-sentence description of the holiday in Spanish.' },
-                                    clothing: { type: Type.STRING, description: 'Detailed description of traditional clothing and costumes worn for this holiday.' },
-                                    elements: { type: Type.STRING, description: 'Key decorative elements, props, and objects used in celebrations.' },
-                                    visualSymbols: { type: Type.STRING, description: 'Important visual symbols and motifs (e.g., "candles, stars, religious icons").' },
-                                    locations: { type: Type.STRING, description: 'Typical venues where celebrations occur (e.g., "cathedral steps, beach bonfires, city plazas").' },
-                                    timeOfDay: { type: Type.STRING, description: 'When key celebrations happen (e.g., "midnight mass", "sunrise ceremony", "evening parade").' },
-                                    activities: { type: Type.STRING, description: 'Traditional activities and rituals (e.g., "lighting candles, folk dancing, firework displays").' },
-                                    colorPalette: { type: Type.STRING, description: 'Traditional colors associated with this holiday (e.g., "red and gold", "purple and white").' },
-                                    flagIsProminent: { type: Type.BOOLEAN, description: 'Boolean indicating if the national flag is a prominent symbol in this celebration.' },
-                                    soundEffects: { type: Type.STRING, description: 'Typical ambient sounds and effects (e.g., "church bells, fireworks, ocean waves").' },
-                                    musicStyles: { type: Type.STRING, description: 'Traditional music genres and instruments (e.g., "mariachi bands, steel drums, bagpipes").' },
                                 },
                             },
                         },
@@ -76,10 +149,71 @@ Focus on authentic cultural details that would help a cinematographer create acc
         const parsed = JSON.parse(jsonStr);
         return parsed.holidays;
     } catch (error) {
-        console.error("Error fetching holidays:", error);
-        throw new Error("Failed to fetch holidays from AI.");
+        console.error("Error fetching holiday list:", error);
+        throw new Error("Failed to fetch holiday list from AI.");
     }
 };
+
+/**
+ * Fetches complete details for a specific holiday.
+ * This is Phase 2 of the 2-phase approach - detailed data fetched on demand.
+ */
+export const fetchHolidayDetails = async (country: string, holidayName: string): Promise<Holiday> => {
+    try {
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: `You are a cultural expert and cinematographer. Provide comprehensive details about the holiday "${holidayName}" as celebrated in ${country}. This information will be used to create professional video productions.
+
+Provide ALL of the following details for this specific holiday:
+- VISUAL DETAILS: Traditional clothing, decorations, props, and visual symbols
+- LOCATIONS: Typical celebration venues (e.g., "town squares", "family homes", "beaches")
+- TIMING: When celebrations typically occur (time of day/night)
+- ACTIVITIES: Key rituals, dances, or traditional activities
+- COLOR PALETTE: Traditional colors associated with this holiday
+- AUDIO: Traditional music styles and ambient sounds  
+- FLAG USAGE: Whether the national flag is prominently featured
+
+Focus on authentic cultural details that would help a cinematographer create accurate, respectful scenes.`,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        name_en: { type: Type.STRING, description: 'The name of the holiday in English.' },
+                        name_es: { type: Type.STRING, description: 'The name of the holiday in Spanish.' },
+                        description_en: { type: Type.STRING, description: 'A brief, one-sentence description of the holiday in English.' },
+                        description_es: { type: Type.STRING, description: 'A brief, one-sentence description of the holiday in Spanish.' },
+                        clothing: { type: Type.STRING, description: 'Detailed description of traditional clothing and costumes worn for this holiday.' },
+                        elements: { type: Type.STRING, description: 'Key decorative elements, props, and objects used in celebrations.' },
+                        visualSymbols: { type: Type.STRING, description: 'Important visual symbols and motifs (e.g., "candles, stars, religious icons").' },
+                        locations: { type: Type.STRING, description: 'Typical venues where celebrations occur (e.g., "cathedral steps, beach bonfires, city plazas").' },
+                        timeOfDay: { type: Type.STRING, description: 'When key celebrations happen (e.g., "midnight mass", "sunrise ceremony", "evening parade").' },
+                        activities: { type: Type.STRING, description: 'Traditional activities and rituals (e.g., "lighting candles, folk dancing, firework displays").' },
+                        colorPalette: { type: Type.STRING, description: 'Traditional colors associated with this holiday (e.g., "red and gold", "purple and white").' },
+                        flagIsProminent: { type: Type.BOOLEAN, description: 'Boolean indicating if the national flag is a prominent symbol in this celebration.' },
+                        soundEffects: { type: Type.STRING, description: 'Typical ambient sounds and effects (e.g., "church bells, fireworks, ocean waves").' },
+                        musicStyles: { type: Type.STRING, description: 'Traditional music genres and instruments (e.g., "mariachi bands, steel drums, bagpipes").' },
+                    },
+                },
+            },
+        });
+
+        const jsonStr = response.text?.trim();
+        if (!jsonStr) {
+            throw new Error("No response received from AI");
+        }
+        return JSON.parse(jsonStr);
+    } catch (error) {
+        console.error("Error fetching holiday details:", error);
+        throw new Error("Failed to fetch holiday details from AI.");
+    }
+};
+
+/**
+ * Legacy function name for backward compatibility.
+ * @deprecated Use fetchHolidayList instead
+ */
+export const fetchHolidays = fetchHolidayList;
 
 export const analyzeLogoStyle = async (logoB64: string, logoMimeType: string): Promise<string> => {
     try {
@@ -113,6 +247,24 @@ export const generateHolidayImage = async (
     blankCanvasMimeType?: string
 ): Promise<{b64: string, mimeType: string}> => {
     try {
+        // Check if we have complete holiday details, fetch from cache if missing
+        if (!holiday.clothing || !holiday.locations || !holiday.activities) {
+            try {
+                const fullDetails = await getCachedOrFetchHolidayDetails(country, holiday.name_en);
+                holiday = { ...holiday, ...fullDetails };
+            } catch (detailsError) {
+                console.error('Failed to get holiday details:', detailsError);
+                throw new Error(`Failed to get complete details for ${holiday.name_en}. Please try again.`);
+            }
+        }
+        
+        // Ensure all required fields are present
+        if (!holiday.locations || !holiday.timeOfDay || !holiday.activities || 
+            !holiday.visualSymbols || !holiday.elements || !holiday.colorPalette || 
+            !holiday.clothing || holiday.flagIsProminent === undefined) {
+            throw new Error(`Missing required holiday details for ${holiday.name_en}. Details fetching may have failed.`);
+        }
+        
         const flagInstruction = holiday.flagIsProminent
             ? `**FLAG ACCURACY**: The flag of ${country} is a key symbol for this holiday and MUST be included prominently. It must be depicted with 100% accuracy. Do not flip, invert, distort, or alter it.`
             : `**FLAG USAGE**: The flag of ${country} is NOT a typical symbol for this holiday. Do NOT include the flag in the scene.`;
@@ -298,6 +450,12 @@ const VIDEO_PROMPT_SCHEMA = {
 
 export const generateVideoPromptJson = async (holiday: Holiday, country: string, style: string): Promise<string> => {
     try {
+        // Check if we have complete holiday details, fetch from cache if missing
+        if (!holiday.clothing || !holiday.locations || !holiday.activities) {
+            const fullDetails = await getCachedOrFetchHolidayDetails(country, holiday.name_en);
+            holiday = { ...holiday, ...fullDetails };
+        }
+        
         const flagInstruction = holiday.flagIsProminent
             ? `The flag of ${country} is a KEY SYMBOL for this holiday and MUST be featured prominently with 100% accuracy in props and visual elements.`
             : `The flag of ${country} is NOT traditionally used in this celebration and should NOT be included in any scene.`;
@@ -489,9 +647,28 @@ export const generateVideo = async (imageB64: string, imageMimeType: string, pro
             operation = await ai.operations.getVideosOperation({ operation: operation });
         }
 
-        const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
+        // Debug logging to understand the response structure
+        console.log("Operation completed. Full operation object:", JSON.stringify(operation, null, 2));
+        console.log("Operation.response:", operation.response);
+        console.log("Operation.response?.generatedVideos:", operation.response?.generatedVideos);
+        
+        let downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
         if (!downloadLink) {
-            throw new Error("Video generation completed, but no download link was found.");
+            // Try alternative paths that might contain the video URL
+            // Using 'any' type to explore the actual response structure
+            const resp = operation.response as any;
+            const alternativeLink = resp?.videos?.[0]?.uri || 
+                                   resp?.video?.uri || 
+                                   resp?.uri ||
+                                   resp?.generatedVideos?.[0]?.uri;
+            
+            if (alternativeLink) {
+                console.log("Found video at alternative path:", alternativeLink);
+                downloadLink = alternativeLink;
+            } else {
+                console.error("Could not find video URI in response. Full response structure:", JSON.stringify(operation.response, null, 2));
+                throw new Error("Video generation completed, but no download link was found.");
+            }
         }
         
         const response = await fetch(`${downloadLink}&key=${process.env.GEMINI_API_KEY}`);

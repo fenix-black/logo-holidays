@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { fetchHolidays } from '@/lib/gemini-server';
+import { fetchHolidayList } from '@/lib/gemini-server';
 import type { ApiResponse, Holiday } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
     
-    const holidays = await fetchHolidays(country);
+    const holidays = await fetchHolidayList(country);
     
     return NextResponse.json<ApiResponse<Holiday[]>>({
       success: true,

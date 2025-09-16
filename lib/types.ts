@@ -3,16 +3,17 @@ export interface Holiday {
   name_es: string;
   description_en: string;
   description_es: string;
-  clothing: string;
-  elements: string;
-  visualSymbols: string;
-  locations: string;
-  timeOfDay: string;
-  activities: string;
-  colorPalette: string;
-  flagIsProminent: boolean;
-  soundEffects: string;
-  musicStyles: string;
+  // Detail fields are optional - fetched on demand when needed
+  clothing?: string;
+  elements?: string;
+  visualSymbols?: string;
+  locations?: string;
+  timeOfDay?: string;
+  activities?: string;
+  colorPalette?: string;
+  flagIsProminent?: boolean;
+  soundEffects?: string;
+  musicStyles?: string;
 }
 
 export interface ImageDetails {
