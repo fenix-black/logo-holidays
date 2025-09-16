@@ -93,6 +93,7 @@ export default function Home() {
           logoAnalysis={logoAnalysis}
           selectedStyle={selectedStyle}
           onStyleChange={setSelectedStyle}
+          initialImage={generatedImage}
           onConfirm={handleImageConfirm} 
           onBack={handleBackToStep2} 
           onRestart={handleRestart} 

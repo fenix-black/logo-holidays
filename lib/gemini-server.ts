@@ -84,7 +84,7 @@ Focus on authentic cultural details that would help a cinematographer create acc
 export const analyzeLogoStyle = async (logoB64: string, logoMimeType: string): Promise<string> => {
     try {
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-pro",
+            model: "gemini-2.5-flash",
             contents: {
                 parts: [
                     { inlineData: { data: logoB64, mimeType: logoMimeType } },

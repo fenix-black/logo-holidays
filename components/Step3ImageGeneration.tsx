@@ -19,17 +19,18 @@ interface Step3ImageGenerationProps {
   logoAnalysis: string;
   selectedStyle: string;
   onStyleChange: (style: string) => void;
+  initialImage?: ImageDetails | null;
   onConfirm: (image: ImageDetails) => void;
   onBack: () => void;
   onRestart: () => void;
 }
 
 const Step3ImageGeneration: React.FC<Step3ImageGenerationProps> = ({ 
-  logo, holiday, country, logoAnalysis, selectedStyle, onStyleChange, onConfirm, onBack, onRestart 
+  logo, holiday, country, logoAnalysis, selectedStyle, onStyleChange, initialImage, onConfirm, onBack, onRestart 
 }) => {
   const { t, locale } = useLocale();
-  const [image, setImage] = useState<ImageDetails | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [image, setImage] = useState<ImageDetails | null>(initialImage || null);
+  const [loading, setLoading] = useState(!initialImage);
   const [error, setError] = useState<string | null>(null);
   const requestInProgressRef = useRef(false);
 
@@ -53,8 +54,11 @@ const Step3ImageGeneration: React.FC<Step3ImageGenerationProps> = ({
   }, [logo.b64, logo.mimeType, holiday, country, logoAnalysis, selectedStyle]);
 
   useEffect(() => {
-    generateImage();
-  }, [generateImage]);
+    // Skip generation if we have an initial image (coming back from Step 4)
+    if (!initialImage) {
+      generateImage();
+    }
+  }, [generateImage, initialImage]);
 
   const handleDownloadImage = () => {
     if (!image) return;
