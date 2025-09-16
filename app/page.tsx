@@ -46,6 +46,10 @@ export default function Home() {
   };
 
   const handleHolidaySelect = (holiday: Holiday) => {
+    // Clear generated image if selecting a different holiday
+    if (selectedHoliday && selectedHoliday.name_en !== holiday.name_en) {
+      setGeneratedImage(null);
+    }
     setSelectedHoliday(holiday);
     setError(null);
     setStep(3);

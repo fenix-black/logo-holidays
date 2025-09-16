@@ -33,6 +33,7 @@ const Step3ImageGeneration: React.FC<Step3ImageGenerationProps> = ({
   const [loading, setLoading] = useState(!initialImage);
   const [error, setError] = useState<string | null>(null);
   const requestInProgressRef = useRef(false);
+  const previousStyleRef = useRef(selectedStyle);
 
   const generateImage = useCallback(async () => {
     // Prevent duplicate requests
@@ -54,11 +55,20 @@ const Step3ImageGeneration: React.FC<Step3ImageGenerationProps> = ({
   }, [logo.b64, logo.mimeType, holiday, country, logoAnalysis, selectedStyle]);
 
   useEffect(() => {
-    // Skip generation if we have an initial image (coming back from Step 4)
-    if (!initialImage) {
+    // Generate image if:
+    // 1. No initial image (first time on Step 3), OR
+    // 2. Style has changed (even when coming back from Step 4)
+    const styleChanged = previousStyleRef.current !== selectedStyle;
+    
+    if (!initialImage || styleChanged) {
+      if (styleChanged) {
+        // Clear current image when style changes to show loading state
+        setImage(null);
+        previousStyleRef.current = selectedStyle;
+      }
       generateImage();
     }
-  }, [generateImage, initialImage]);
+  }, [generateImage, initialImage, selectedStyle]);
 
   const handleDownloadImage = () => {
     if (!image) return;
@@ -100,7 +110,11 @@ const Step3ImageGeneration: React.FC<Step3ImageGenerationProps> = ({
                 {GUIDING_STYLES.map(style => (
                     <button 
                       key={style} 
-                      onClick={() => onStyleChange(style)}
+                      onClick={() => {
+                        if (style !== selectedStyle && !loading) {
+                          onStyleChange(style);
+                        }
+                      }}
                       disabled={loading}
                       className={`px-4 py-2 text-sm font-medium rounded-full border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                         selectedStyle === style
