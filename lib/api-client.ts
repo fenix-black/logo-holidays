@@ -174,20 +174,23 @@ export const generateVideo = async (
   const maxPollingTime = 600000; // 10 minutes
   const pollingInterval = 5000; // 5 seconds
   const startTime = Date.now();
+  let pollCount = 0;
   
   while (Date.now() - startTime < maxPollingTime) {
     // Wait before checking (except first iteration)
-    if (Date.now() > startTime) {
+    if (pollCount > 0) {
       await new Promise(resolve => setTimeout(resolve, pollingInterval));
     }
+    
+    pollCount++;
 
-    // Check status
+    // Check status with poll count for realistic progress
     const statusResponse = await fetch('/api/generate-video/status', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ operationName }),
+      body: JSON.stringify({ operationName, pollCount }),
     });
 
     const statusData: ApiResponse<VideoStatusResponse> = await statusResponse.json();

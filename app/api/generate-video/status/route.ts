@@ -11,7 +11,7 @@ interface VideoStatusResponse {
 
 export async function POST(request: NextRequest) {
   try {
-    const { operationName } = await request.json();
+    const { operationName, pollCount = 1 } = await request.json();
     
     if (!operationName) {
       return NextResponse.json<ApiResponse>({
@@ -74,9 +74,10 @@ export async function POST(request: NextRequest) {
       });
     }
     
-    // Still processing - calculate a simple progress estimate
-    // You could enhance this by tracking time since start if needed
-    const progress = status.progress || 50;
+    // Still processing - calculate realistic progress based on poll count
+    // Using logarithmic curve that approaches but never exceeds 95%
+    const calculatedProgress = Math.min(95, Math.floor(100 * (1 - Math.exp(-pollCount * 0.2))));
+    const progress = status.progress || calculatedProgress;
     
     return NextResponse.json<ApiResponse<VideoStatusResponse>>({
       success: true,

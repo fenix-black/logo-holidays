@@ -50,10 +50,13 @@ const Step4VideoGeneration: React.FC<Step4VideoGenerationProps> = ({ image, holi
             prompt,
             (progressValue) => {
                 setProgress(progressValue);
-                if (progressValue < 50) {
+                // Update message based on actual progress
+                if (progressValue < 30) {
                     setLoadingMessage(t('step4.generating'));
-                } else {
+                } else if (progressValue < 70) {
                     setLoadingMessage(t('step4.processing'));
+                } else {
+                    setLoadingMessage(t('step4.finalizing'));
                 }
             }
         );

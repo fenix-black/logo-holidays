@@ -111,6 +111,7 @@ export const es: Record<string, string> = {
   'step4.generateVideo': 'Generar Video',
   'step4.generating': 'Generando tu video...',
   'step4.processing': 'Procesando tu video...',
+  'step4.finalizing': 'Finalizando tu video...',
   'step4.generatingText': 'Esto puede tardar de 2 a 5 minutos',
   'step4.downloadVideo': 'Descargar Video',
   'step4.restart': 'Empezar de Nuevo',
