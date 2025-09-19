@@ -14,6 +14,7 @@ export class GeminiVideoGenerator {
   private config: VideoGenerationConfig;
   private abortController?: AbortController;
   private ai: GoogleGenAI;
+  private currentModelIndex: number = 0;
 
   constructor(config: VideoGenerationConfig) {
     this.config = {
@@ -21,6 +22,8 @@ export class GeminiVideoGenerator {
       pollingInterval: 5000, // 5 seconds default  
       outputFormat: 'url',
       model: 'veo-3.0-fast-generate-001', // VEO3 default
+      retryOnOverload: true, // Enable auto-retry by default
+      fallbackModels: ['veo-3.0-fast-generate-preview'], // Default fallback models
       ...config
     };
     
@@ -46,31 +49,81 @@ export class GeminiVideoGenerator {
    * Start video generation and return operation name
    */
   async startGeneration(input: VideoGenerationInput): Promise<string> {
-    try {
-      // Use Google GenAI SDK to start generation
-      const operation = await this.ai.models.generateVideos({
-        model: this.config.model!,
-        prompt: input.prompt,
-        image: {
-          imageBytes: input.imageData.base64,
-          mimeType: input.imageData.mimeType,
-        },
-        config: { 
-          numberOfVideos: 1,
-          ...input.modelConfig 
+    const modelsToTry = this.getModelsToTry();
+    let lastError: any;
+
+    for (let i = 0; i < modelsToTry.length; i++) {
+      const model = modelsToTry[i];
+      console.log(`Attempting video generation with model: ${model}`);
+      
+      try {
+        // Use Google GenAI SDK to start generation
+        const operation = await this.ai.models.generateVideos({
+          model: model,
+          prompt: input.prompt,
+          image: {
+            imageBytes: input.imageData.base64,
+            mimeType: input.imageData.mimeType,
+          },
+          config: { 
+            numberOfVideos: 1,
+            ...input.modelConfig 
+          }
+        });
+
+        if (!operation.name) {
+          throw new Error('No operation name returned from Gemini');
         }
-      });
 
-      if (!operation.name) {
-        throw new Error('No operation name returned from Gemini');
+        console.log(`Gemini video generation started successfully with model ${model}, operation:`, operation.name);
+        return operation.name;
+      } catch (error: any) {
+        console.error(`Failed to start Gemini video generation with model ${model}:`, error);
+        lastError = error;
+        
+        // Check if it's an overload error (code 14) and we should retry
+        if (this.isOverloadError(error) && i < modelsToTry.length - 1 && this.config.retryOnOverload) {
+          console.log(`Model ${model} is overloaded, trying next model...`);
+          continue;
+        }
+        
+        // If not an overload error or no more models to try, throw
+        throw error;
       }
-
-      console.log('Gemini video generation started with operation:', operation.name);
-      return operation.name;
-    } catch (error) {
-      console.error('Failed to start Gemini video generation:', error);
-      throw error;
     }
+
+    // If we get here, all models failed
+    throw lastError || new Error('All video generation models failed');
+  }
+
+  /**
+   * Get list of models to try, including primary and fallbacks
+   */
+  private getModelsToTry(): string[] {
+    const models = [this.config.model!];
+    if (this.config.fallbackModels && this.config.fallbackModels.length > 0) {
+      models.push(...this.config.fallbackModels);
+    }
+    return models;
+  }
+
+  /**
+   * Check if an error is an overload error (code 14)
+   */
+  private isOverloadError(error: any): boolean {
+    // Check for Google API error code 14
+    if (error?.code === 14) {
+      return true;
+    }
+    // Check for error message containing overload indication
+    if (error?.message && error.message.toLowerCase().includes('overloaded')) {
+      return true;
+    }
+    // Check for nested error structure
+    if (error?.error?.code === 14) {
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -154,9 +207,17 @@ export class GeminiVideoGenerator {
     
     if (operation.error) {
       console.error('Gemini video generation error:', operation.error);
+      
+      // If it's an overload error during polling, mark it specially
+      // This allows the caller to potentially restart with a different model
+      const errorMessage = operation.error.message || 'Generation failed';
+      const isOverload = operation.error.code === 14 || 
+                        errorMessage.toLowerCase().includes('overloaded');
+      
       return { 
         status: 'failed',
-        error: operation.error.message || 'Generation failed'
+        error: errorMessage,
+        ...(isOverload && { isOverloadError: true })
       };
     }
     

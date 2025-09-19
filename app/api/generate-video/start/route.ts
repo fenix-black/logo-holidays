@@ -20,10 +20,15 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
     
-    // Initialize the generator with veo-3.0-fast-generate-001
+    // Initialize the generator with primary model and fallbacks
     const generator = new GeminiVideoGenerator({
       apiKey: process.env.GEMINI_API_KEY,
-      model: 'veo-3.0-fast-generate-001', //'veo-3.0-fast-generate-001',
+      model: 'veo-3.0-fast-generate-001', // Primary model
+      fallbackModels: [
+        'veo-3.0-fast-generate-preview',  // First fallback
+        'veo-2.0-fast-generate-001',       // Second fallback if available
+      ],
+      retryOnOverload: true, // Enable automatic retry on overload
       outputFormat: 'url'
     });
 

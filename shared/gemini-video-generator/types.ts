@@ -11,9 +11,11 @@ export type GenerationStatus = 'pending' | 'processing' | 'succeeded' | 'failed'
 export interface VideoGenerationConfig {
   apiKey: string;
   model?: string; // Default: 'models/video-01' for VEO3
+  fallbackModels?: string[]; // Alternative models to try if primary fails
   maxPollingTime?: number; // ms
   pollingInterval?: number; // ms
   outputFormat?: OutputFormat;
+  retryOnOverload?: boolean; // Whether to auto-retry with fallback models on overload
 }
 
 /**
@@ -37,6 +39,7 @@ export interface PollingStatus {
   progress?: number;
   output?: string;
   error?: string;
+  isOverloadError?: boolean; // Indicates if error is due to model overload
 }
 
 /**
