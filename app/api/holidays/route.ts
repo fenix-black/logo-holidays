@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchHolidayList } from '@/lib/gemini-server';
+import { holidayService } from '@/lib/holiday-service';
 import type { ApiResponse, Holiday } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
@@ -13,7 +14,16 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
     
-    const holidays = await fetchHolidayList(country);
+    // Try to get holidays from the in-memory service first
+    let holidays = holidayService.getHolidays(country);
+    
+    // If service doesn't have the data, fall back to Gemini API
+    if (!holidays) {
+      console.log(`Holiday service miss for ${country}, falling back to Gemini API`);
+      holidays = await fetchHolidayList(country);
+    } else {
+      console.log(`✓ Serving holidays for ${country} from memory (v${holidayService.getDataVersion()})`);
+    }
     
     return NextResponse.json<ApiResponse<Holiday[]>>({
       success: true,

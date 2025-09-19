@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 import type { Holiday } from './types';
+import { holidayService } from './holiday-service';
 
 if (!process.env.GEMINI_API_KEY) {
     throw new Error("GEMINI_API_KEY environment variable not set");
@@ -54,8 +55,23 @@ const getCachedOrFetchHolidayDetails = async (country: string, holidayName: stri
         return cached.data;
     }
     
-    // If cache is expired or doesn't exist, fetch fresh data
-    console.log(`↻ Fetching fresh holiday details for: ${cacheKey}`);
+    // First, try to get details from our holiday service (pre-generated data)
+    const holidayFromService = holidayService.getHolidayDetails(country, holidayName);
+    if (holidayFromService) {
+        console.log(`✓ Using holiday details from service for: ${cacheKey}`);
+        
+        // Store in cache for consistency
+        evictOldestCacheEntry();
+        holidayDetailsCache.set(cacheKey, {
+            data: holidayFromService,
+            timestamp: Date.now()
+        });
+        
+        return holidayFromService;
+    }
+    
+    // If not in service (e.g., new country/holiday), fall back to Gemini API
+    console.log(`↻ Fetching fresh holiday details from Gemini for: ${cacheKey}`);
     const details = await fetchHolidayDetails(country, holidayName);
     
     // Evict oldest entry if cache is full
