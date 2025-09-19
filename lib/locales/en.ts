@@ -110,6 +110,7 @@ export const en: Record<string, string> = {
   'step4.refineCancel': 'Cancel',
   'step4.generateVideo': 'Generate Video',
   'step4.generating': 'Generating your video...',
+  'step4.processing': 'Processing your video...',
   'step4.generatingText': 'This may take 2-5 minutes',
   'step4.downloadVideo': 'Download Video',
   'step4.restart': 'Start Over',

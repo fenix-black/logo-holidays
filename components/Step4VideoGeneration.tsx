@@ -29,34 +29,42 @@ const Step4VideoGeneration: React.FC<Step4VideoGenerationProps> = ({ image, holi
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loadingMessage, setLoadingMessage] = useState(t('step4.generating'));
+  const [progress, setProgress] = useState(0);
   const requestInProgressRef = useRef(false);
 
   const loadingMessages = useMemo(() => [
     t('step4.generating'),
-    t('step4.generatingText'),
+    t('step4.processing'),
   ], [t]);
   
   const handleVideoGeneration = useCallback(async (prompt: string) => {
     setLoading(true);
     setError(null);
     setVideoUrl(null);
-
-    let messageIndex = 0;
-    const interval = setInterval(() => {
-        messageIndex = (messageIndex + 1) % loadingMessages.length;
-        setLoadingMessage(loadingMessages[messageIndex]);
-    }, 8000);
+    setProgress(0);
 
     try {
-        const url = await generateVideo(image.b64, image.mimeType, prompt);
+        const url = await generateVideo(
+            image.b64, 
+            image.mimeType, 
+            prompt,
+            (progressValue) => {
+                setProgress(progressValue);
+                if (progressValue < 50) {
+                    setLoadingMessage(t('step4.generating'));
+                } else {
+                    setLoadingMessage(t('step4.processing'));
+                }
+            }
+        );
         setVideoUrl(url);
+        setProgress(100);
     } catch(e: any) {
         setError(e.message || "Failed to generate video.");
     } finally {
-        clearInterval(interval);
         setLoading(false);
     }
-  }, [image.b64, image.mimeType, loadingMessages]);
+  }, [image.b64, image.mimeType, t]);
   
   const getInitialPromptAndVideo = useCallback(async () => {
     // Prevent duplicate requests
@@ -127,6 +135,17 @@ const Step4VideoGeneration: React.FC<Step4VideoGenerationProps> = ({ image, holi
             <div className="flex flex-col items-center justify-center gap-4 p-4 text-center">
                 <Loader />
                 <p className="text-cyan-300">{loadingMessage}</p>
+                {progress > 0 && (
+                    <div className="w-full max-w-xs">
+                        <div className="bg-gray-600 rounded-full h-2 overflow-hidden">
+                            <div 
+                                className="bg-cyan-400 h-full transition-all duration-500 ease-out"
+                                style={{ width: `${progress}%` }}
+                            />
+                        </div>
+                        <p className="text-sm text-gray-400 mt-2">{progress}%</p>
+                    </div>
+                )}
             </div>
         )}
         {error && !loading && (

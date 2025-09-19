@@ -139,12 +139,21 @@ export const refineVideoPromptJson = async (
   return data.data;
 };
 
+interface VideoStatusResponse {
+  status: 'processing' | 'succeeded' | 'failed';
+  progress?: number;
+  videoUrl?: string;
+  error?: string;
+}
+
 export const generateVideo = async (
   imageB64: string,
   imageMimeType: string,
-  prompt: string
+  prompt: string,
+  onProgress?: (progress: number) => void
 ): Promise<string> => {
-  const response = await fetch('/api/generate-video', {
+  // Start the video generation
+  const startResponse = await fetch('/api/generate-video/start', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -152,20 +161,67 @@ export const generateVideo = async (
     body: JSON.stringify({ imageB64, imageMimeType, prompt }),
   });
 
-  const data: ApiResponse<string> = await response.json();
+  const startData: ApiResponse<{ operationName: string }> = await startResponse.json();
   
-  if (!data.success || !data.data) {
-    throw new Error(data.error || 'Failed to generate video');
+  if (!startData.success || !startData.data) {
+    throw new Error(startData.error || 'Failed to start video generation');
   }
+
+  const operationName = startData.data.operationName;
+  console.log('Started video generation with operation:', operationName);
+
+  // Poll for completion
+  const maxPollingTime = 600000; // 10 minutes
+  const pollingInterval = 5000; // 5 seconds
+  const startTime = Date.now();
   
-  // Convert base64 video to blob URL
-  const videoBase64 = data.data;
-  const byteCharacters = atob(videoBase64);
-  const byteNumbers = new Array(byteCharacters.length);
-  for (let i = 0; i < byteCharacters.length; i++) {
-    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  while (Date.now() - startTime < maxPollingTime) {
+    // Wait before checking (except first iteration)
+    if (Date.now() > startTime) {
+      await new Promise(resolve => setTimeout(resolve, pollingInterval));
+    }
+
+    // Check status
+    const statusResponse = await fetch('/api/generate-video/status', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ operationName }),
+    });
+
+    const statusData: ApiResponse<VideoStatusResponse> = await statusResponse.json();
+    
+    if (!statusData.success || !statusData.data) {
+      throw new Error(statusData.error || 'Failed to check video status');
+    }
+
+    const { status, progress, videoUrl, error } = statusData.data;
+
+    // Update progress callback
+    if (onProgress && progress !== undefined) {
+      onProgress(progress);
+    }
+
+    // Handle completion
+    if (status === 'succeeded' && videoUrl) {
+      // Convert base64 video to blob URL
+      const videoBase64 = videoUrl;
+      const byteCharacters = atob(videoBase64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'video/mp4' });
+      return URL.createObjectURL(blob);
+    }
+
+    // Handle failure
+    if (status === 'failed') {
+      throw new Error(error || 'Video generation failed');
+    }
   }
-  const byteArray = new Uint8Array(byteNumbers);
-  const blob = new Blob([byteArray], { type: 'video/mp4' });
-  return URL.createObjectURL(blob);
+
+  throw new Error('Video generation timed out');
 };
