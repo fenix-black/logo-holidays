@@ -275,7 +275,9 @@ export const generateHolidayImage = async (
             ? `The overall mood and aesthetic must be strongly influenced by this guiding style: **${style}**.`
             : `The style should be a standard, photorealistic festive representation.`;
 
-        const textPrompt = `Create a cinematic, professional scene celebrating '${holiday.name_en}' in ${country}. 
+        const textPrompt = `⛔ STRICT AGE POLICY: Generate ONLY adults (18+). Absolutely NO children, babies, toddlers, or minors allowed.
+
+Create a cinematic, professional scene celebrating '${holiday.name_en}' in ${country}. 
 
 SCENE COMPOSITION:
 - Setting: ${holiday.locations} during ${holiday.timeOfDay}
@@ -289,10 +291,11 @@ CRITICAL REQUIREMENTS:
 1. **ASPECT RATIO**: The final image MUST have a 16:9 aspect ratio (landscape format).
 
 2. **LOGO INTEGRATION**: The brand logo is the HERO element. It MUST be:
-   - Displayed prominently and clearly visible
+   - Displayed in 1-2 natural locations maximum (e.g., ONE main banner/sign, optionally ONE subtle secondary placement)
    - Preserved with 100% accuracy - original shape, colors, and proportions
    - NOT altered, redrawn, or reinterpreted in any way
-   - Integrated naturally into the scene (e.g., on banners, projections, or displays)
+   - Integrated naturally into the scene as if it belongs there
+   - Do NOT repeat the logo excessively or create patterns with it
 
 3. **PEOPLE & AGE RESTRICTIONS**:
    ⚠️ ABSOLUTELY NO CHILDREN, MINORS, OR YOUNG PEOPLE UNDER 18
@@ -317,7 +320,9 @@ CRITICAL REQUIREMENTS:
 
 6. ${flagInstruction}
 
-7. **CANVAS CONFORMITY**: The output MUST match the exact 16:9 dimensions of the provided input image (1920x1080).`;
+7. **CANVAS CONFORMITY**: The output MUST match the exact 16:9 dimensions of the provided input image (1920x1080).
+
+FINAL REMINDER: Only generate adults (no children). Display logo in 1-2 natural locations only.`;
         
         // The composite image already contains the logo on a 16:9 canvas
         // This enforces the aspect ratio while giving Gemini full freedom to reposition the logo
