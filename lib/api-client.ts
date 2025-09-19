@@ -28,21 +28,6 @@ export const fileToBase64 = (file: File): Promise<{ b64: string; mimeType: strin
   });
 };
 
-/**
- * Creates a blank, base64-encoded PNG image using canvas.
- * @param width The width of the canvas.
- * @param height The height of the canvas.
- * @returns An object with the base64 string and mimeType.
- */
-export const createBlankImageB64 = (width: number, height: number): { b64: string; mimeType: string } => {
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const dataUrl = canvas.toDataURL('image/png');
-  const b64 = dataUrl.split(',')[1];
-  return { b64, mimeType: 'image/png' };
-};
-
 export const fetchHolidays = async (country: string): Promise<Holiday[]> => {
   const response = await fetch('/api/holidays', {
     method: 'POST',
@@ -80,30 +65,25 @@ export const analyzeLogoStyle = async (logoB64: string, logoMimeType: string): P
 };
 
 export const generateHolidayImage = async (
-  logoB64: string,
-  logoMimeType: string,
+  compositeB64: string,
+  compositeMimeType: string,
   holiday: Holiday,
   country: string,
   logoAnalysis: string,
   style: string
 ): Promise<ImageDetails> => {
-  // Create a blank 16:9 canvas to enforce aspect ratio
-  const blankCanvas = createBlankImageB64(1280, 720);
-  
   const response = await fetch('/api/generate-image', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      logoB64,
-      logoMimeType,
+      compositeB64,
+      compositeMimeType,
       holiday,
       country,
       logoAnalysis,
       style,
-      blankCanvasB64: blankCanvas.b64,
-      blankCanvasMimeType: blankCanvas.mimeType,
     }),
   });
 

@@ -35,6 +35,81 @@ const Step3ImageGeneration: React.FC<Step3ImageGenerationProps> = ({
   const requestInProgressRef = useRef(false);
   const previousStyleRef = useRef(selectedStyle);
 
+  // Create a composite image with logo on 16:9 canvas
+  const createLogoComposite = useCallback(async (logoB64: string, logoMimeType: string): Promise<{ b64: string; mimeType: string }> => {
+    return new Promise((resolve, reject) => {
+      // Create canvas with 16:9 aspect ratio
+      const canvas = document.createElement('canvas');
+      canvas.width = 1920;
+      canvas.height = 1080;
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) {
+        reject(new Error('Failed to get canvas context'));
+        return;
+      }
+
+      // Fill with white background
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, 1920, 1080);
+
+      // Load logo image
+      const logoImg = new Image();
+      logoImg.onload = () => {
+        // Calculate logo dimensions (max 1/3 of canvas)
+        const maxLogoWidth = 1920 / 3;  // 640px
+        const maxLogoHeight = 1080 / 3; // 360px
+        
+        let finalLogoWidth = logoImg.width;
+        let finalLogoHeight = logoImg.height;
+
+        // Scale down if needed
+        if (logoImg.width > maxLogoWidth || logoImg.height > maxLogoHeight) {
+          const scaleX = maxLogoWidth / logoImg.width;
+          const scaleY = maxLogoHeight / logoImg.height;
+          const scale = Math.min(scaleX, scaleY);
+          
+          finalLogoWidth = Math.round(logoImg.width * scale);
+          finalLogoHeight = Math.round(logoImg.height * scale);
+        }
+
+        // Center the logo on canvas
+        const x = Math.round((1920 - finalLogoWidth) / 2);
+        const y = Math.round((1080 - finalLogoHeight) / 2);
+
+        // Draw with high quality
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(logoImg, x, y, finalLogoWidth, finalLogoHeight);
+
+        // Convert to blob
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            reject(new Error('Failed to create image blob'));
+            return;
+          }
+          
+          // Convert blob to base64
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const result = reader.result as string;
+            const b64 = result.split(',')[1];
+            resolve({ b64, mimeType: 'image/png' });
+          };
+          reader.onerror = () => reject(new Error('Failed to convert image'));
+          reader.readAsDataURL(blob);
+        }, 'image/png');
+      };
+
+      logoImg.onerror = () => {
+        reject(new Error('Failed to load logo image'));
+      };
+
+      // Start loading the logo
+      logoImg.src = `data:${logoMimeType};base64,${logoB64}`;
+    });
+  }, []);
+
   const generateImage = useCallback(async () => {
     // Prevent duplicate requests
     if (requestInProgressRef.current) return;
@@ -44,7 +119,12 @@ const Step3ImageGeneration: React.FC<Step3ImageGenerationProps> = ({
       setLoading(true);
       setError(null);
       setImage(null);
-      const generatedImg = await generateHolidayImage(logo.b64, logo.mimeType, holiday, country, logoAnalysis, selectedStyle);
+      
+      // Create composite image with logo on canvas
+      const composite = await createLogoComposite(logo.b64, logo.mimeType);
+      
+      // Generate the holiday image with the composite
+      const generatedImg = await generateHolidayImage(composite.b64, composite.mimeType, holiday, country, logoAnalysis, selectedStyle);
       setImage(generatedImg);
     } catch (e: any) {
       setError(e.message || 'An unknown error occurred.');
@@ -52,7 +132,7 @@ const Step3ImageGeneration: React.FC<Step3ImageGenerationProps> = ({
       setLoading(false);
       requestInProgressRef.current = false;
     }
-  }, [logo.b64, logo.mimeType, holiday, country, logoAnalysis, selectedStyle]);
+  }, [logo.b64, logo.mimeType, holiday, country, logoAnalysis, selectedStyle, createLogoComposite]);
 
   useEffect(() => {
     // Generate image if:

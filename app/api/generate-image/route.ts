@@ -6,9 +6,9 @@ export const maxDuration = 60; // Maximum allowed duration for Vercel hobby plan
 
 export async function POST(request: NextRequest) {
   try {
-    const { logoB64, logoMimeType, holiday, country, logoAnalysis, style, blankCanvasB64, blankCanvasMimeType } = await request.json();
+    const { compositeB64, compositeMimeType, holiday, country, logoAnalysis, style } = await request.json();
     
-    if (!logoB64 || !logoMimeType || !holiday || !country || !logoAnalysis) {
+    if (!compositeB64 || !compositeMimeType || !holiday || !country || !logoAnalysis) {
       return NextResponse.json<ApiResponse>({
         success: false,
         error: 'Missing required parameters'
@@ -16,14 +16,12 @@ export async function POST(request: NextRequest) {
     }
     
     const image = await generateHolidayImage(
-      logoB64,
-      logoMimeType,
+      compositeB64,
+      compositeMimeType,
       holiday as Holiday,
       country,
       logoAnalysis,
-      style || 'Default',
-      blankCanvasB64,
-      blankCanvasMimeType
+      style || 'Default'
     );
     
     return NextResponse.json<ApiResponse<ImageDetails>>({

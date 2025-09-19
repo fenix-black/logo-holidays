@@ -94,18 +94,6 @@ export const getHolidayDetailsCacheStats = (): { size: number; maxSize: number; 
 };
 
 /**
- * Creates a minimal blank PNG image using a pre-generated base64 string
- * This is a 16x9 (16:9 aspect ratio) transparent PNG that Gemini uses as aspect ratio reference
- * @returns An object with the base64 string and mimeType.
- */
-const createBlankImageB64 = (): { b64: string; mimeType: string } => {
-    // This is a 16x9 transparent PNG (16:9 aspect ratio)
-    // Created using: canvas.width = 16; canvas.height = 9; with transparent background
-    const b64 = 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAJCAYAAAA7KqwyAAAAEklEQVQoU2NkIBIwjhowCAIAAAkAAWyqEiUAAAAASUVORK5CYII=';
-    return { b64, mimeType: 'image/png' };
-};
-
-/**
  * Fetches a simplified list of holidays with only names and descriptions.
  * This is Phase 1 of the 2-phase approach - fast loading for the selection UI.
  */
@@ -237,14 +225,12 @@ export const analyzeLogoStyle = async (logoB64: string, logoMimeType: string): P
 };
 
 export const generateHolidayImage = async (
-    logoB64: string, 
-    logoMimeType: string, 
+    compositeB64: string, 
+    compositeMimeType: string, 
     holiday: Holiday, 
     country: string, 
     logoAnalysis: string, 
-    style: string,
-    blankCanvasB64?: string,
-    blankCanvasMimeType?: string
+    style: string
 ): Promise<{b64: string, mimeType: string}> => {
     try {
         // Check if we have complete holiday details, fetch from cache if missing
@@ -315,18 +301,12 @@ CRITICAL REQUIREMENTS:
 
 6. ${flagInstruction}
 
-7. **CANVAS CONFORMITY**: The output MUST match the exact 16:9 dimensions of the provided blank canvas template.`;
+7. **CANVAS CONFORMITY**: The output MUST match the exact 16:9 dimensions of the provided input image (1920x1080).`;
         
-        // Create a blank 16:9 canvas to enforce aspect ratio
-        const blankCanvas = blankCanvasB64 && blankCanvasMimeType 
-            ? { b64: blankCanvasB64, mimeType: blankCanvasMimeType }
-            : createBlankImageB64();
-        
+        // The composite image already contains the logo on a 16:9 canvas
+        // This enforces the aspect ratio while giving Gemini full freedom to reposition the logo
         const parts: any[] = [
-            { inlineData: { data: logoB64, mimeType: logoMimeType } },
-            // IMPORTANT: The blank canvas serves as a size/aspect ratio template for the output
-            // Gemini will generate an image that matches this canvas's 16:9 dimensions
-            { inlineData: { data: blankCanvas.b64, mimeType: blankCanvas.mimeType } },
+            { inlineData: { data: compositeB64, mimeType: compositeMimeType } },
             { text: textPrompt },
         ];
         
