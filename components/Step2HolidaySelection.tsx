@@ -21,7 +21,7 @@ const Step2HolidaySelection: React.FC<Step2HolidaySelectionProps> = ({ country, 
     return (
         <div className="flex flex-col items-center justify-center gap-4 h-64">
             <Loader />
-            <p className="text-cyan-300">{t('step2.loading', { country })}</p>
+            <p className="text-cyan-300">{t('step2.loading')}</p>
         </div>
     );
   }

@@ -36,7 +36,7 @@ export const en: Record<string, string> = {
   'step1.error.invalidFormat': 'Invalid file format. Please use PNG, JPG, GIF, or WEBP',
 
   // Step2HolidaySelection.tsx
-  'step2.loading': 'Analyzing logo & searching festivities in {country}...',
+  'step2.loading': 'Analyzing your logo\'s visual style...',
   'step2.noHolidays': 'No holidays found for {country}.',
   'step2.title': 'Step 2: Choose a Holiday',
   'step2.description': 'Select a holiday to theme your logo animation.',

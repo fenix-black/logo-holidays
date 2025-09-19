@@ -36,7 +36,7 @@ export const es: Record<string, string> = {
   'step1.error.invalidFormat': 'Formato inválido. Usa PNG, JPG, GIF o WEBP',
 
   // Step2HolidaySelection.tsx
-  'step2.loading': 'Analizando logo y buscando festividades en {country}...',
+  'step2.loading': 'Analizando el estilo visual de tu logo...',
   'step2.noHolidays': 'No se encontraron feriados para {country}.',
   'step2.title': 'Paso 2: Elige un Feriado',
   'step2.description': 'Selecciona un feriado para la animación de tu logo.',
