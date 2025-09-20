@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { generateHolidayImage } from '@/lib/api-client';
 import type { Holiday, ImageDetails } from '@/lib/types';
+import { convertImageToJpg, formatBytes, getOptimalQuality } from '@/lib/image-utils';
 import { Loader } from './Loader';
 import { RefreshIcon } from './icons/RefreshIcon';
 import { CheckIcon } from './icons/CheckIcon';
@@ -30,7 +31,10 @@ const Step3ImageGeneration: React.FC<Step3ImageGenerationProps> = ({
 }) => {
   const { t, locale } = useLocale();
   const [image, setImage] = useState<ImageDetails | null>(initialImage || null);
+  const [jpgImage, setJpgImage] = useState<ImageDetails | null>(null);
+  const [conversionInfo, setConversionInfo] = useState<{ratio: number, saved: string} | null>(null);
   const [loading, setLoading] = useState(!initialImage);
+  const [converting, setConverting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestInProgressRef = useRef(false);
   const previousStyleRef = useRef(selectedStyle);
@@ -126,6 +130,32 @@ const Step3ImageGeneration: React.FC<Step3ImageGenerationProps> = ({
       // Generate the holiday image with the composite
       const generatedImg = await generateHolidayImage(composite.b64, composite.mimeType, holiday, country, logoAnalysis, selectedStyle);
       setImage(generatedImg);
+      
+      // Convert to JPG for optimization
+      setConverting(true);
+      try {
+        const converted = await convertImageToJpg(generatedImg.b64, {
+          quality: getOptimalQuality('ai-context'),
+          maxWidth: 1024,
+          maxHeight: 1024
+        });
+        
+        setJpgImage({
+          b64: converted.b64,
+          mimeType: converted.mimeType
+        });
+        
+        setConversionInfo({
+          ratio: converted.compressionRatio,
+          saved: formatBytes(converted.originalSize - converted.compressedSize)
+        });
+      } catch (conversionError) {
+        console.error('Image conversion failed:', conversionError);
+        // Fallback to original if conversion fails
+        setJpgImage(null);
+      } finally {
+        setConverting(false);
+      }
     } catch (e: any) {
       setError(e.message || 'An unknown error occurred.');
     } finally {
@@ -151,10 +181,13 @@ const Step3ImageGeneration: React.FC<Step3ImageGenerationProps> = ({
   }, [generateImage, initialImage, selectedStyle]);
 
   const handleDownloadImage = () => {
-    if (!image) return;
+    // Prefer JPG version if available for smaller file size
+    const imageToDownload = jpgImage || image;
+    if (!imageToDownload) return;
+    
     const link = document.createElement('a');
-    link.href = `data:${image.mimeType};base64,${image.b64}`;
-    const fileExtension = image.mimeType.split('/')[1] || 'png';
+    link.href = `data:${imageToDownload.mimeType};base64,${imageToDownload.b64}`;
+    const fileExtension = imageToDownload.mimeType.split('/')[1] || 'png';
     link.download = `logo-${holiday.name_en.toLowerCase().replace(/\s/g, '-')}-${selectedStyle.toLowerCase()}.${fileExtension}`;
     document.body.appendChild(link);
     link.click();
@@ -166,7 +199,7 @@ const Step3ImageGeneration: React.FC<Step3ImageGenerationProps> = ({
       <h2 className="text-2xl font-semibold text-cyan-300">{t('step3.title')}</h2>
       <p className="text-center text-gray-400">{t('step3.description', { holidayName: locale === 'es' ? holiday.name_es : holiday.name_en })}</p>
 
-      <div className="w-full bg-gray-700/50 rounded-lg flex items-center justify-center border border-gray-600 overflow-hidden min-h-[300px]">
+      <div className="w-full bg-gray-700/50 rounded-lg flex items-center justify-center border border-gray-600 overflow-hidden min-h-[300px] relative">
         {loading && (
             <div className="flex flex-col items-center justify-center gap-4 p-4 text-center">
                 <Loader />
@@ -176,11 +209,18 @@ const Step3ImageGeneration: React.FC<Step3ImageGenerationProps> = ({
         )}
         {error && <div className="text-center text-red-400 p-4">{error}</div>}
         {image && (
-          <img
-            src={`data:${image.mimeType};base64,${image.b64}`}
-            alt="Generated holiday-themed logo"
-            className="w-full h-auto object-contain max-h-[60vh]"
-          />
+          <>
+            <img
+              src={`data:${image.mimeType};base64,${image.b64}`}
+              alt="Generated holiday-themed logo"
+              className="w-full h-auto object-contain max-h-[60vh]"
+            />
+            {converting && (
+              <div className="absolute bottom-2 left-2 right-2 text-sm text-gray-300 text-center bg-gray-800/80 rounded px-2 py-1">
+                Optimizing image for faster processing...
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -226,7 +266,11 @@ const Step3ImageGeneration: React.FC<Step3ImageGenerationProps> = ({
             </button>
         </div>
         <button
-            onClick={() => image && onConfirm(image)}
+            onClick={() => {
+              // Use JPG version if available (for token optimization), otherwise use original
+              const imageToPass = jpgImage || image;
+              if (imageToPass) onConfirm(imageToPass);
+            }}
             disabled={!image || loading}
             className="w-full flex items-center justify-center gap-2 px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-600 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-cyan-500 transition-all"
         >
