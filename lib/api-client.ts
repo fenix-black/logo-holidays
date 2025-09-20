@@ -99,14 +99,16 @@ export const generateHolidayImage = async (
 export const generateVideoPromptJson = async (
   holiday: Holiday,
   country: string,
-  style: string
+  style: string,
+  imageB64?: string,
+  imageMimeType?: string
 ): Promise<string> => {
   const response = await fetch('/api/generate-video-prompt', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ holiday, country, style }),
+    body: JSON.stringify({ holiday, country, style, imageB64, imageMimeType }),
   });
 
   const data: ApiResponse<string> = await response.json();

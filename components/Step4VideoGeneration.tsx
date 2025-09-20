@@ -79,7 +79,13 @@ const Step4VideoGeneration: React.FC<Step4VideoGenerationProps> = ({ image, holi
     setLoadingMessage(t('step4.generating'));
 
     try {
-      const initialPrompt = await generateVideoPromptJson(holiday, country, selectedStyle);
+      const initialPrompt = await generateVideoPromptJson(
+        holiday, 
+        country, 
+        selectedStyle,
+        image.b64,
+        image.mimeType
+      );
       setVideoPrompt(initialPrompt);
       await handleVideoGeneration(initialPrompt);
     } catch (e: any) {
@@ -88,7 +94,7 @@ const Step4VideoGeneration: React.FC<Step4VideoGenerationProps> = ({ image, holi
     } finally {
       requestInProgressRef.current = false;
     }
-  }, [holiday, country, selectedStyle, handleVideoGeneration, t]);
+  }, [holiday, country, selectedStyle, image.b64, image.mimeType, handleVideoGeneration, t]);
 
   useEffect(() => {
     getInitialPromptAndVideo();

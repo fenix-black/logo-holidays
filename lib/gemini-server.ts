@@ -364,103 +364,233 @@ FINAL REMINDER: Only generate adults (no children). Display logo in 1-2 natural 
 const VIDEO_PROMPT_SCHEMA = {
     type: Type.OBJECT,
     properties: {
-        shot: {
+        video_structure: {
             type: Type.OBJECT,
             properties: {
-                composition: { type: Type.STRING, description: "Camera setup and framing (e.g., 'Wide establishing shot, 24mm lens on gimbal stabilizer', 'Medium shot, 50mm lens on tripod', 'Aerial drone shot with slow descent'). Specify lens, mount, and framing." },
-                camera_motion: { type: Type.STRING, description: "8-second camera movement path (e.g., 'Smooth dolly push-in from wide to medium', 'Static locked-off shot', 'Slow circular orbit around subject'). Must complete within 8 seconds." },
-                frame_rate: { type: Type.STRING, description: "Frame rate specification (e.g., '24fps for cinematic feel', '30fps standard', '60fps with 50% slow-motion for dreamy effect')." },
-                film_grain: { type: Type.STRING, description: "Visual texture and color treatment (e.g., 'Clean digital with warm festive LUT', 'Film-emulated grain for nostalgic feel', 'HDR with vibrant saturation')." }
+                total_scenes: { type: Type.NUMBER, description: "Number of scenes (maximum 2). Each scene should be 4 seconds for a total of 8 seconds." },
+                transition: { type: Type.STRING, description: "How scenes connect (e.g., 'Smooth cut', 'Cross-dissolve', 'Match cut on action'). Only needed if 2 scenes." }
             },
-            required: ["composition", "camera_motion", "frame_rate", "film_grain"]
+            required: ["total_scenes", "transition"]
         },
-        subject: {
+        people_consistency: {
             type: Type.OBJECT,
             properties: {
-                people: { type: Type.STRING, description: "ADULTS ONLY (18+): Detailed description of adult participants with mature features. NO CHILDREN or anyone under 18. Specify clear adult characteristics. NULL if no people in shot." },
-                wardrobe: { type: Type.STRING, description: "Complete traditional holiday attire for ADULT participants only. Include colors, textures, accessories. NULL if no people." },
-                character_consistency: { type: Type.STRING, description: "Key identifying features of ADULT characters to maintain throughout. NULL if no people." }
+                count: { type: Type.STRING, description: "EXACT number and description of people from the source image (e.g., '2 adult women', '1 adult man', 'no people'). MUST match source image exactly." },
+                outfit_preservation: { type: Type.STRING, description: "EXACT clothing/outfits from source image. Every detail must be preserved (colors, styles, accessories). Critical: DO NOT change or add clothing." },
+                gender_preservation: { type: Type.STRING, description: "Gender identities that MUST remain consistent throughout video. NO transformations allowed (e.g., 'Woman remains woman', 'Man remains man')." },
+                physical_features: { type: Type.STRING, description: "Key identifying features to maintain (hair color/style, skin tone, approximate age, body type). These CANNOT change between scenes." }
             },
-            required: ["people", "wardrobe", "character_consistency"]
+            required: ["count", "outfit_preservation", "gender_preservation", "physical_features"]
         },
-        logo_display: {
+        logo_preservation: {
             type: Type.OBJECT,
             properties: {
-                integration_method: { type: Type.STRING, description: "How logo appears in EVERY frame (e.g., 'Mounted on festival banner center frame', 'Projected onto building wall', 'Printed on flags throughout shot'). Must be on PHYSICAL object." },
-                visibility_throughout: { type: Type.STRING, description: "Exactly how logo STAYS visible for full 8 seconds (e.g., 'Banner remains in frame as camera dollies in', 'Logo on building stays centered during orbit', 'Multiple flag instances ensure constant visibility')." },
-                physical_behavior: { type: Type.STRING, description: "Realistic logo physics (e.g., 'Gentle fabric ripple in breeze', 'Stable on rigid signage', 'Natural perspective shift with camera angle'). NO magical effects." }
+                text_integrity: { type: Type.STRING, description: "Logo text must be 100% legible and undistorted. NEVER replace the brand name - use exact original text. Specify exact placement to avoid warping (e.g., 'On flat rigid surface', 'Center of banner with minimal fold')." },
+                icon_integrity: { type: Type.STRING, description: "Logo icon/symbol must maintain exact proportions and shape. NO stretching, squashing, or perspective distortion beyond natural viewing angles." },
+                color_integrity: { type: Type.STRING, description: "Logo colors must be preserved EXACTLY as in original. NO color changes, tinting, or filters that alter brand colors. Specify how original colors are maintained (e.g., 'Original blue and white preserved', 'Brand red stays consistent')." },
+                placement_strategy: { type: Type.STRING, description: "Strategic placement across scenes to ensure visibility without distortion (e.g., 'Scene 1: on rigid signboard, Scene 2: on flat wall projection')." },
+                size_consistency: { type: Type.STRING, description: "Logo must maintain readable size throughout. Specify minimum size relative to frame (e.g., 'At least 10% of frame width')." }
             },
-            required: ["integration_method", "visibility_throughout", "physical_behavior"]
+            required: ["text_integrity", "icon_integrity", "color_integrity", "placement_strategy", "size_consistency"]
         },
-        scene: {
-            type: Type.OBJECT,
-            properties: {
-                location: { type: Type.STRING, description: "Specific celebration venue (e.g., 'Historic town square with cobblestones', 'Beachfront at sunset', 'Decorated family courtyard')." },
-                time_of_day: { type: Type.STRING, description: "Exact time setting affecting lighting (e.g., 'Golden hour at 6pm', 'Midnight under full moon', 'Dawn at 5:30am')." },
-                environment: { type: Type.STRING, description: "Atmospheric details and weather (e.g., 'Light snow falling, warm streetlights glowing', 'Clear night with fireworks launching', 'Morning mist with birds')." }
+        scenes: {
+            type: Type.ARRAY,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    scene_number: { type: Type.NUMBER, description: "Scene number (1 or 2)" },
+                    duration: { type: Type.STRING, description: "Duration in seconds (e.g., '4 seconds' for 2-scene video, '8 seconds' for single scene)" },
+                    shot: {
+                        type: Type.OBJECT,
+                        properties: {
+                            composition: { type: Type.STRING, description: "Camera setup and framing. Specify lens, mount, and framing." },
+                            camera_motion: { type: Type.STRING, description: "Camera movement for this scene duration." },
+                            focus: { type: Type.STRING, description: "Focus approach and depth of field." }
+                        },
+                        required: ["composition", "camera_motion", "focus"]
+                    },
+                    subject_placement: {
+                        type: Type.OBJECT,
+                        properties: {
+                            people: { type: Type.STRING, description: "EXACT people from source image with SAME outfits, genders, and count. If source has 2 women in red dresses, this MUST have 2 women in the SAME red dresses." },
+                            positions: { type: Type.STRING, description: "Where people are positioned in frame." },
+                            actions: { type: Type.STRING, description: "What people are doing (must be culturally appropriate)." }
+                        },
+                        required: ["people", "positions", "actions"]
+                    },
+                    logo_display: {
+                        type: Type.OBJECT,
+                        properties: {
+                            method: { type: Type.STRING, description: "How logo appears WITHOUT distortion or color changes (e.g., 'On rigid signboard with original colors', 'Flat wall projection preserving brand colors', 'Center of taut banner')." },
+                            visibility: { type: Type.STRING, description: "How logo remains visible, legible, and in original colors throughout scene." }
+                        },
+                        required: ["method", "visibility"]
+                    },
+                    environment: {
+                        type: Type.OBJECT,
+                        properties: {
+                            location: { type: Type.STRING, description: "Specific setting for this scene." },
+                            time: { type: Type.STRING, description: "Time of day affecting lighting." },
+                            atmosphere: { type: Type.STRING, description: "Weather and environmental details." },
+                            props: { type: Type.STRING, description: "Holiday-specific props and decorations." }
+                        },
+                        required: ["location", "time", "atmosphere", "props"]
+                    },
+                    action: { type: Type.STRING, description: "Main action happening in this scene." },
+                    holiday_elements: { type: Type.STRING, description: "Cultural symbols and holiday-specific elements visible." }
+                },
+                required: ["scene_number", "duration", "shot", "subject_placement", "logo_display", "environment", "action", "holiday_elements"]
             },
-            required: ["location", "time_of_day", "environment"]
-        },
-        visual_details: {
-            type: Type.OBJECT,
-            properties: {
-                action: { type: Type.STRING, description: "The continuous 8-second action (e.g., 'Crowd gathers as fireworks build to climax', 'Dancers perform traditional routine', 'Family lights ceremonial candles in sequence')." },
-                props: { type: Type.STRING, description: "All visible festive props and decorations (e.g., 'Paper lanterns, flower garlands, traditional altar', 'National flags, confetti cannons, stage setup')." },
-                holiday_elements: { type: Type.STRING, description: "Specific cultural symbols and decorations that identify this holiday." },
-                physics: { type: Type.STRING, description: "Natural physical dynamics (e.g., 'Confetti floating down, fabric swaying, candle flames flickering')." }
-            },
-            required: ["action", "props", "holiday_elements", "physics"]
+            description: "Array of 1 or 2 scenes maximum. Each scene is 4 seconds if 2 scenes, or 8 seconds if 1 scene."
         },
         cinematography: {
             type: Type.OBJECT,
             properties: {
-                lighting: { type: Type.STRING, description: "Complete lighting setup (e.g., 'Natural golden hour with warm key light, cool shadow fill, practical festival lights adding depth')." },
-                color_grading: { type: Type.STRING, description: "Color treatment and mood (e.g., 'Warm amber highlights with cool blue shadows, slightly desaturated for cinematic feel')." },
-                depth_of_field: { type: Type.STRING, description: "Focus approach (e.g., 'Shallow f/2.8 with dreamy bokeh', 'Deep focus f/8 keeping all planes sharp', 'Focus pull from foreground to logo at 4 seconds')." },
-                tone: { type: Type.STRING, description: "Overall visual mood (e.g., 'Celebratory and vibrant', 'Intimate and warm', 'Epic and grand')." }
+                visual_style: { type: Type.STRING, description: "Overall visual treatment and color grading." },
+                lighting: { type: Type.STRING, description: "Lighting setup across scenes." },
+                color_palette: { type: Type.STRING, description: "Dominant colors maintaining holiday theme." }
             },
-            required: ["lighting", "color_grading", "depth_of_field", "tone"]
+            required: ["visual_style", "lighting", "color_palette"]
         },
         audio: {
             type: Type.OBJECT,
             properties: {
-                music: { type: Type.STRING, description: "Single continuous 8-second music piece (e.g., 'Traditional folk melody building to festive crescendo', 'Orchestral celebration theme with cultural instruments')." },
-                ambient: { type: Type.STRING, description: "Environmental soundscape layer (e.g., 'Crowd murmur growing louder, distant fireworks popping', 'Ocean waves, seabirds, festival preparation sounds')." },
-                sound_effects: { type: Type.STRING, description: "Key synchronized sound moments (e.g., 'Firework launches at 2 and 5 seconds', 'Bell chimes at 3-second mark', 'Cheers erupting at 6 seconds')." },
-                logo_audio: { type: Type.STRING, description: "Subtle logo-related sound if any (e.g., 'Soft fabric rustle', 'Gentle wind across banner'). Keep natural and quiet." }
+                music: { type: Type.STRING, description: "8-second music track covering all scenes." },
+                ambient: { type: Type.STRING, description: "Environmental sounds." },
+                effects: { type: Type.STRING, description: "Sound effects synchronized with action." }
             },
-            required: ["music", "ambient", "sound_effects", "logo_audio"]
+            required: ["music", "ambient", "effects"]
         },
-        color_palette: {
-            type: Type.STRING,
-            description: "Dominant colors in order of prominence (e.g., 'Warm golds and reds with white accents and deep blue shadows')."
-        },
-        visual_rules: {
+        critical_rules: {
             type: Type.OBJECT,
             properties: {
-                required_elements: {
+                people_rules: {
                     type: Type.ARRAY,
                     items: { type: Type.STRING },
-                    description: "MANDATORY elements for every shot. Must include at minimum: ['Logo visible in every single frame', 'Logo on physical object not floating', 'Culturally accurate clothing if people shown', 'Authentic holiday symbols', 'Natural physics throughout']."
+                    description: "Rules for people consistency: ['Exact same number of people as source', 'Same genders - no transformations', 'Same outfits - no changes', 'Same physical features', 'Adults only (18+)']."
                 },
-                prohibited_elements: {
+                logo_rules: {
                     type: Type.ARRAY,
                     items: { type: Type.STRING },
-                    description: "STRICTLY FORBIDDEN elements. Must include at minimum: ['Children or anyone under 18', 'Babies or toddlers', 'Teenagers or minors', 'Logo fading or disappearing', 'Logo leaving frame', 'Magical glowing on realistic objects', 'Floating or ethereal logos', 'Supernatural effects on flags/symbols', 'Fantasy particles', 'Unrealistic transformations', 'Text overlays or subtitles']."
+                    description: "Rules for logo integrity: ['NEVER replace or change the brand logo text', 'NEVER change the brand logo colors', 'Original logo text must be preserved exactly', 'Original logo colors must be preserved exactly', 'Text must be 100% legible', 'No warping or distortion', 'Icon maintains exact proportions', 'Visible in every frame', 'On physical objects only']."
+                },
+                prohibited: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING },
+                    description: "Strictly forbidden: ['Replacing brand logo text', 'Changing logo colors', 'Changing logo wording', 'Changing people count', 'Gender transformations', 'Outfit changes', 'Logo distortion', 'Text warping', 'Children or minors', 'Magical effects', 'More than 2 scenes']."
                 }
             },
-            required: ["required_elements", "prohibited_elements"]
+            required: ["people_rules", "logo_rules", "prohibited"]
         }
     },
-    required: ["shot", "subject", "logo_display", "scene", "visual_details", "cinematography", "audio", "color_palette", "visual_rules"]
+    required: ["video_structure", "people_consistency", "logo_preservation", "scenes", "cinematography", "audio", "critical_rules"]
 };
 
-export const generateVideoPromptJson = async (holiday: Holiday, country: string, style: string): Promise<string> => {
+// Schema for structured image analysis response
+const IMAGE_PEOPLE_ANALYSIS_SCHEMA = {
+    type: Type.OBJECT,
+    properties: {
+        peopleCount: { 
+            type: Type.STRING, 
+            description: "Exact number of people in image (e.g., '2 people', 'no people', '1 person', '3 people')" 
+        },
+        peopleDescription: { 
+            type: Type.STRING, 
+            description: "Brief description of people if present (e.g., 'two adult women', 'one adult man', 'no people visible')" 
+        },
+        outfits: { 
+            type: Type.STRING, 
+            description: "EXACT clothing details including colors, styles, patterns, accessories. Be very specific (e.g., 'red traditional sari with gold embroidery', 'blue suit with white shirt'). If no people: 'n/a - no people'" 
+        },
+        genders: { 
+            type: Type.STRING, 
+            description: "Clear gender presentation of each person (e.g., 'person 1: woman, person 2: man'). If no people: 'n/a - no people'" 
+        },
+        physicalFeatures: { 
+            type: Type.STRING, 
+            description: "Key identifying features - hair, age, build (e.g., 'woman 1: long black hair, 30s; man 1: short gray hair, 50s'). If no people: 'n/a - no people'" 
+        }
+    },
+    required: ["peopleCount", "peopleDescription", "outfits", "genders", "physicalFeatures"]
+};
+
+/**
+ * Analyzes a generated holiday image to extract details about people for video consistency
+ */
+export const analyzeImageForPeople = async (imageB64: string, imageMimeType: string): Promise<{
+    peopleCount: string;
+    peopleDescription: string;
+    outfits: string;
+    genders: string;
+    physicalFeatures: string;
+}> => {
+    try {
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: {
+                parts: [
+                    { inlineData: { data: imageB64, mimeType: imageMimeType } },
+                    { text: `Analyze this holiday celebration image and extract EXACT details about the people shown.
+
+Your analysis will be used to maintain consistency in a video generation, so accuracy is critical.
+
+Focus on:
+- Exact count of people
+- Their clothing and accessories (be very specific about colors and styles)
+- Gender presentation as shown in image
+- Physical characteristics that identify each person
+
+If there are no people in the image, indicate "no people" for count and "n/a - no people" for other fields.` }
+                ],
+            },
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: IMAGE_PEOPLE_ANALYSIS_SCHEMA,
+            },
+        });
+
+        const jsonStr = response.text?.trim();
+        if (!jsonStr) {
+            throw new Error("No response received from image analysis");
+        }
+        
+        return JSON.parse(jsonStr);
+    } catch (error) {
+        console.error("Error analyzing image for people:", error);
+        // Return safe defaults if analysis fails
+        return {
+            peopleCount: "unable to determine",
+            peopleDescription: "unable to determine", 
+            outfits: "unable to determine",
+            genders: "unable to determine",
+            physicalFeatures: "unable to determine"
+        };
+    }
+};
+
+export const generateVideoPromptJson = async (holiday: Holiday, country: string, style: string, imageB64?: string, imageMimeType?: string): Promise<string> => {
     try {
         // Check if we have complete holiday details, fetch from cache if missing
         if (!holiday.clothing || !holiday.locations || !holiday.activities) {
             const fullDetails = await getCachedOrFetchHolidayDetails(country, holiday.name_en);
             holiday = { ...holiday, ...fullDetails };
+        }
+
+        // Analyze the image for people details if provided
+        let peopleAnalysis = {
+            peopleCount: "not specified",
+            peopleDescription: "not specified",
+            outfits: "traditional holiday attire",
+            genders: "not specified",
+            physicalFeatures: "not specified"
+        };
+        
+        if (imageB64 && imageMimeType) {
+            try {
+                peopleAnalysis = await analyzeImageForPeople(imageB64, imageMimeType);
+            } catch (analysisError) {
+                console.error("Image analysis failed, using defaults:", analysisError);
+            }
         }
         
         const flagInstruction = holiday.flagIsProminent
@@ -472,90 +602,85 @@ export const generateVideoPromptJson = async (holiday: Holiday, country: string,
             : `Use standard cinematic treatment with natural, festive tones.`;
 
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-pro",
-            contents: `You are a world-class cinematographer creating a single continuous 8-second shot for a premium brand holiday video. Generate a detailed JSON shot description for the Veo 3.0 video model to animate an image celebrating '${holiday.name_en}' in ${country}.
+            model: "gemini-2.5-pro", 
+            contents: `You are a world-class cinematographer creating a video prompt for a premium brand holiday celebration. Generate a detailed JSON description for the Veo 3.0 video model to animate an image celebrating '${holiday.name_en}' in ${country}.
 
-📽️ SHOT SPECIFICATIONS: ONE CONTINUOUS 8-SECOND TAKE
+🎬 VIDEO SPECIFICATIONS
+Duration: 8 seconds total
+Structure: Maximum 2 scenes (can be 1 scene for 8 seconds OR 2 scenes of 4 seconds each)
+Hero Element: Brand logo MUST be visible in EVERY frame without distortion
 
-PRODUCTION DETAILS:
-Holiday: "${holiday.name_en}" - ${holiday.description_en}
-Location: ${country}
-Duration: Exactly 8 seconds, single continuous shot
-Hero Element: Brand logo visible in EVERY frame
+📸 SOURCE IMAGE ANALYSIS (CRITICAL - MUST MATCH EXACTLY):
+- People Count: ${peopleAnalysis.peopleCount}
+- People Description: ${peopleAnalysis.peopleDescription}
+- Exact Outfits: ${peopleAnalysis.outfits}
+- Genders (MUST NOT CHANGE): ${peopleAnalysis.genders}
+- Physical Features: ${peopleAnalysis.physicalFeatures}
+
+⚠️ ABSOLUTE REQUIREMENTS:
+1. PEOPLE CONSISTENCY:
+   - Use EXACT same number of people as in source image (${peopleAnalysis.peopleCount})
+   - Preserve EXACT outfits - do not change any clothing details
+   - Maintain SAME genders throughout - NO transformations
+   - Keep same physical features (hair, age, build)
+   
+2. LOGO PRESERVATION:
+   - NEVER replace or change the brand logo text - use EXACT original text
+   - NEVER change the brand logo colors - preserve EXACT original colors
+   - Logo text must be 100% legible - NO warping or distortion
+   - Logo icon must maintain exact proportions
+   - Logo colors must remain identical to original (no tinting, filtering, or color shifts)
+   - Place on FLAT or rigid surfaces to avoid distortion
+   - Ensure readable size (minimum 10% of frame width)
+   - The actual brand name/text and colors in the logo must remain unchanged
+
+3. SCENE STRUCTURE:
+   - Maximum 2 scenes total
+   - Each scene should be distinct but connected
+   - Smooth transitions between scenes if using 2
 
 CULTURAL CONTEXT:
+Holiday: "${holiday.name_en}" - ${holiday.description_en}
+Location: ${country}
 - Locations: ${holiday.locations}
 - Peak Time: ${holiday.timeOfDay}
 - Activities: ${holiday.activities}
 - Visual Symbols: ${holiday.visualSymbols}
 - Props/Elements: ${holiday.elements}
 - Colors: ${holiday.colorPalette}
-- Traditional Attire: ${holiday.clothing}
+- Traditional Attire: ${holiday.clothing} (BUT use exact outfits from image if people present)
 - Soundscape: ${holiday.soundEffects}
 - Music Style: ${holiday.musicStyles}
 
-STYLE DIRECTION: ${styleInstruction}
+STYLE: ${styleInstruction}
+${flagInstruction}
 
-🎬 SINGLE-SHOT REQUIREMENTS:
+SCENE DESIGN GUIDELINES:
+If 1 Scene (8 seconds):
+- One continuous shot with smooth camera movement
+- Logo visible throughout on stable surface
+- Complete action arc within 8 seconds
 
-1. CAMERA APPROACH:
-   - Design ONE continuous camera move that tells a complete story in 8 seconds
-   - Choose appropriate lens (24mm wide, 50mm standard, 85mm portrait, etc.)
-   - Camera motion should be smooth and purposeful (dolly, crane, orbit, or static)
-   - Frame rate: 24fps for cinematic, 30fps standard, or mixed with slow-mo sections
+If 2 Scenes (4 seconds each):
+- Scene 1: Establishing shot with initial action
+- Scene 2: Closer or different angle continuing/completing action
+- Logo visible in both scenes on non-distorting surfaces
+- Natural transition between scenes
 
-2. LOGO INTEGRATION (CRITICAL):
-   ⚠️ Logo MUST be visible in EVERY FRAME of the 8-second shot
-   - Place logo on a PHYSICAL OBJECT that stays in frame (banner, building, multiple flags, signage)
-   - Design camera movement that keeps logo visible throughout
-   - Logo should feel naturally integrated, not digitally overlaid
-   - Physical behavior only: fabric movement, perspective shifts, natural lighting
+CRITICAL PROHIBITIONS:
+❌ Replacing or changing the brand logo text (must use EXACT original text)
+❌ Changing the brand logo colors (must preserve EXACT original colors)
+❌ Changing number of people from source
+❌ Changing genders or transforming people
+❌ Altering outfits from source image
+❌ Logo text distortion or warping
+❌ Logo color shifting, tinting, or filtering
+❌ Logo disappearing or fading
+❌ Children or anyone under 18
+❌ More than 2 scenes
+❌ Magical or supernatural effects
 
-3. SHOT COMPOSITION:
-   - Start with a compelling opening frame that immediately establishes context
-   - Design movement/action that builds to a climax around 6-7 seconds
-   - End on a satisfying final frame at 8 seconds
-   - Consider depth layers: foreground, midground, background
-
-4. SUBJECT & ACTION:
-   - If people are included: ADULTS ONLY (18+) - Describe mature adults with clear adult features
-   - NO CHILDREN, teenagers, or anyone who could appear under 18 years old
-   - Adults should wear traditional ${holiday.clothing}
-   - Primary action should tell the holiday story (e.g., lighting ceremony, dance performance, fireworks launch)
-   - Action must complete within 8 seconds
-
-5. LOCATION & ATMOSPHERE:
-   - Choose ONE specific location from: ${holiday.locations}
-   - Set at optimal time: ${holiday.timeOfDay}
-   - Include weather/atmospheric elements that enhance mood
-
-6. VISUAL AUTHENTICITY:
-   - ${flagInstruction}
-   - Feature key activities: ${holiday.activities}
-   - Include authentic symbols: ${holiday.visualSymbols}
-   - Color palette based on: ${holiday.colorPalette}
-
-7. CINEMATOGRAPHY DETAILS:
-   - Lighting: Natural or motivated by scene (golden hour, fireworks, candles, etc.)
-   - Depth of field: Choose based on story needs (shallow for intimacy, deep for spectacle)
-   - Color grading: ${style !== 'Default' ? style + ' aesthetic' : 'Natural festive warmth'}
-   
-8. AUDIO DESIGN:
-   - ONE continuous music track: ${holiday.musicStyles} style, 8 seconds
-   - Layer ambient sounds: ${holiday.soundEffects}
-   - Time specific sound effects to action moments
-   - Logo audio should be subtle and realistic (fabric, wind, etc.)
-
-9. PHYSICS & REALISM:
-   ✅ REQUIRED: Natural physics, real shadows, authentic materials, practical effects
-   ❌ PROHIBITED: Magical glows, floating objects, fantasy particles, supernatural effects, logo fading/disappearing
-
-Remember: This is ONE CONTINUOUS 8-SECOND SHOT where the logo never leaves frame. Think "premium commercial cinematography" with cultural authenticity.
-
-⚠️ FINAL CRITICAL REQUIREMENT: NO CHILDREN OR MINORS
-The shot must NOT include any children, babies, teenagers, or anyone who could appear under 18 years old. If people are shown, they must be clearly mature adults with adult features. This is an absolute requirement for video generation compatibility.
-
-Output a valid JSON object following the single-shot schema.`,
+Output a valid JSON following the multi-scene schema with people_consistency and logo_preservation sections filled accurately.`,
             config: {
                 responseMimeType: "application/json",
                 responseSchema: VIDEO_PROMPT_SCHEMA,
@@ -577,49 +702,60 @@ export const refineVideoPromptJson = async (currentJson: string, userInstruction
     try {
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
-            contents: `You are a professional cinematographer refining a single 8-second shot description. Apply the director's notes while maintaining all technical requirements.
+            contents: `You are a professional cinematographer refining a video prompt. Apply the director's notes while maintaining all critical constraints.
 
 Director's Notes: "${userInstructions}"
 
-Current Shot JSON:
+Current Video JSON:
 ${currentJson}
 
-⚠️ CRITICAL CONSTRAINTS (MUST NOT BE VIOLATED):
-1. **Single Shot**: This is ONE continuous 8-second take, NOT multiple scenes
-2. **Logo Visibility**: Logo MUST be visible in EVERY FRAME on a PHYSICAL object
-3. **NO CHILDREN**: Absolutely NO people under 18 - adults only if people are shown
-4. **Duration**: Exactly 8 seconds of continuous action
-5. **Realism**: NO magical effects, everything must obey real physics
-6. **Audio**: ONE continuous music track for the full 8 seconds
+⚠️ ABSOLUTE CONSTRAINTS (NEVER VIOLATE):
+1. **Maximum 2 Scenes**: Can be 1 scene (8 seconds) or 2 scenes (4 seconds each). NEVER more than 2.
+2. **People Consistency**: 
+   - EXACT same number of people as specified in people_consistency.count
+   - NO gender changes - preserve exact genders from people_consistency.gender_preservation
+   - NO outfit changes - keep exact clothing from people_consistency.outfit_preservation
+3. **Logo Integrity**:
+   - NEVER replace or change the brand logo text - preserve EXACT original text
+   - NEVER change the brand logo colors - preserve EXACT original colors
+   - Text must be 100% legible - NO distortion
+   - Icon must maintain proportions - NO warping
+   - Colors must remain identical - NO tinting or filtering
+   - Must be visible in EVERY frame
+   - Place on FLAT/rigid surfaces only
+4. **NO CHILDREN**: Adults only (18+) if people shown
+5. **Duration**: Exactly 8 seconds total
+6. **Realism**: NO magical effects, natural physics only
 
 EDITING GUIDELINES:
-1. Apply director's notes to the relevant JSON sections
-2. Maintain single-shot structure (no scene breaks or cuts)
-3. If logo placement changes, ensure it stays visible throughout
-4. Keep professional cinematography terminology
-5. Preserve cultural authenticity
-6. Maintain realistic physics and lighting
+1. Apply director's notes to relevant JSON sections
+2. Maintain scene count (don't add scenes beyond 2)
+3. Preserve all people_consistency details exactly
+4. Ensure logo_preservation rules are followed
+5. Keep cultural authenticity
+6. Professional cinematography terminology
 
-SINGLE-SHOT SCHEMA REFERENCE:
-- shot: Camera setup (composition, motion, frame_rate, film_grain)
-- subject: People details (people, wardrobe, character_consistency) - can be null
-- logo_display: How logo stays visible (integration_method, visibility_throughout, physical_behavior)
-- scene: Location details (location, time_of_day, environment)
-- visual_details: Action and props (action, props, holiday_elements, physics)
-- cinematography: Visual treatment (lighting, color_grading, depth_of_field, tone)
-- audio: Sound design (music, ambient, sound_effects, logo_audio)
-- color_palette: Dominant colors
-- visual_rules: Required and prohibited elements
+NEW SCHEMA STRUCTURE:
+- video_structure: Scene count and transitions
+- people_consistency: CRITICAL - preserve all details exactly
+- logo_preservation: Text/icon integrity rules
+- scenes: Array of 1-2 scene descriptions
+- cinematography: Visual style across scenes
+- audio: 8-second soundtrack
+- critical_rules: Mandatory constraints
 
 VALIDATION CHECKLIST:
-✓ Still a single continuous shot?
-✓ Logo visible throughout entire 8 seconds?
+✓ Maximum 2 scenes maintained?
+✓ People count, genders, outfits unchanged?
+✓ Logo text, colors, and icon unchanged?
+✓ Logo colors preserved exactly as original?
+✓ Logo visible in every frame?
 ✓ NO children, teenagers, or minors included?
 ✓ Action completes within 8 seconds?
 ✓ All effects realistic and grounded?
 ✓ Audio described as continuous?
 
-Apply the requested changes while maintaining the single-shot format. Return the updated JSON only.`,
+Apply the requested changes while maintaining all constraints. Return the updated JSON only.`,
             config: {
                 responseMimeType: "application/json",
                 responseSchema: VIDEO_PROMPT_SCHEMA,

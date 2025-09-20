@@ -4,7 +4,7 @@ import type { ApiResponse, Holiday } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
   try {
-    const { holiday, country, style } = await request.json();
+    const { holiday, country, style, imageB64, imageMimeType } = await request.json();
     
     if (!holiday || !country) {
       return NextResponse.json<ApiResponse>({
@@ -16,7 +16,9 @@ export async function POST(request: NextRequest) {
     const promptJson = await generateVideoPromptJson(
       holiday as Holiday,
       country,
-      style || 'Default'
+      style || 'Default',
+      imageB64,
+      imageMimeType
     );
     
     return NextResponse.json<ApiResponse<string>>({
