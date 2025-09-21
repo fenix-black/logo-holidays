@@ -377,10 +377,10 @@ const VIDEO_PROMPT_SCHEMA = {
             properties: {
                 count: { type: Type.STRING, description: "EXACT number and description of people from the source image (e.g., '2 adult women', '1 adult man', 'no people'). MUST match source image exactly." },
                 outfit_preservation: { type: Type.STRING, description: "EXACT clothing/outfits from source image. Every detail must be preserved (colors, styles, accessories). Critical: DO NOT change or add clothing." },
-                gender_preservation: { type: Type.STRING, description: "Gender identities that MUST remain consistent throughout video. NO transformations allowed (e.g., 'Woman remains woman', 'Man remains man')." },
+                //gender_preservation: { type: Type.STRING, description: "Gender identities that MUST remain consistent throughout video. NO transformations allowed (e.g., 'Woman remains woman', 'Man remains man')." },
                 physical_features: { type: Type.STRING, description: "Key identifying features to maintain (hair color/style, skin tone, approximate age, body type). These CANNOT change between scenes." }
             },
-            required: ["count", "outfit_preservation", "gender_preservation", "physical_features"]
+            required: ["count", "outfit_preservation", "physical_features"]
         },
         logo_preservation: {
             type: Type.OBJECT,
@@ -713,7 +713,7 @@ ${currentJson}
 1. **Maximum 2 Scenes**: Can be 1 scene (8 seconds) or 2 scenes (4 seconds each). NEVER more than 2.
 2. **People Consistency**: 
    - EXACT same number of people as specified in people_consistency.count
-   - NO gender changes - preserve exact genders from people_consistency.gender_preservation
+   - NO gender changes - preserve exact genders
    - NO outfit changes - keep exact clothing from people_consistency.outfit_preservation
 3. **Logo Integrity**:
    - NEVER replace or change the brand logo text - preserve EXACT original text
