@@ -160,7 +160,7 @@ export function formatBytes(bytes: number): string {
 /**
  * Determines optimal quality setting based on use case
  */
-export function getOptimalQuality(purpose: 'display' | 'download' | 'ai-context'): number {
+export function getOptimalQuality(purpose: 'display' | 'download' | 'ai-context' | 'video-generation'): number {
   switch (purpose) {
     case 'display':
       return 0.85; // High quality for visual display
@@ -168,6 +168,8 @@ export function getOptimalQuality(purpose: 'display' | 'download' | 'ai-context'
       return 0.9;  // Very high quality for user downloads
     case 'ai-context':
       return 0.75; // Balanced for AI processing
+    case 'video-generation':
+      return 0.92; // High quality for video source material
     default:
       return 0.8;  // Default middle ground
   }

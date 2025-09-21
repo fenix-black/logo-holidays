@@ -131,13 +131,13 @@ const Step3ImageGeneration: React.FC<Step3ImageGenerationProps> = ({
       const generatedImg = await generateHolidayImage(composite.b64, composite.mimeType, holiday, country, logoAnalysis, selectedStyle);
       setImage(generatedImg);
       
-      // Convert to JPG for optimization
+      // Convert to JPG for optimization (using higher quality for video generation)
       setConverting(true);
       try {
         const converted = await convertImageToJpg(generatedImg.b64, {
-          quality: getOptimalQuality('ai-context'),
-          maxWidth: 1024,
-          maxHeight: 1024
+          quality: getOptimalQuality('video-generation'),
+          maxWidth: 1920,
+          maxHeight: 1080
         });
         
         setJpgImage({
