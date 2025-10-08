@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { Holiday, ImageDetails } from '@/lib/types';
 import Step1LogoCountry from '@/components/Step1LogoCountry';
 import Step2HolidaySelection from '@/components/Step2HolidaySelection';
@@ -9,9 +9,11 @@ import Step4VideoGeneration from '@/components/Step4VideoGeneration';
 import { fetchHolidays, analyzeLogoStyle } from '@/lib/api-client';
 import { useLocale } from '@/hooks/useLocale';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { GrowthKitAccountWidget, type GrowthKitAccountWidgetRef } from '@fenixblack/growthkit';
 
 export default function Home() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  const growthKitRef = useRef<GrowthKitAccountWidgetRef>(null);
   const [step, setStep] = useState(1);
   const [logoDetails, setLogoDetails] = useState<ImageDetails | null>(null);
   const [country, setCountry] = useState<string>('USA');
@@ -82,6 +84,13 @@ export default function Home() {
     setError(null);
   };
 
+  // Sync GrowthKit language when page language changes
+  useEffect(() => {
+    if (growthKitRef.current) {
+      growthKitRef.current.setLanguage(locale);
+    }
+  }, [locale]);
+
   const renderStep = () => {
     switch (step) {
       case 1:
@@ -118,39 +127,50 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4 font-sans">
-      <div className="w-full max-w-2xl mx-auto">
-        <header className="text-center mb-6">
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-cyan-400 to-purple-600 text-transparent bg-clip-text">
-            {t('app.title')}
-          </h1>
-          <p className="text-gray-400 mt-2 mb-4">{t('app.description')}</p>
-          <div className="flex justify-center">
-            <LanguageSwitcher />
-          </div>
-        </header>
-        <main className="bg-gray-800/50 backdrop-blur-sm p-6 md:p-8 rounded-2xl shadow-2xl shadow-cyan-500/10 border border-gray-700">
-            {error && <div className="bg-red-500/20 border border-red-500 text-red-300 p-3 rounded-lg mb-4">{error}</div>}
-            {renderStep()}
-        </main>
-         <footer className="text-center mt-8">
-            <a 
-              href="https://www.fenixblack.ai" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="flex flex-col items-center gap-3 text-gray-400 hover:text-cyan-400 transition-all duration-300 group"
-            >
-              <img 
-                src="/ave-solo-alpha.png" 
-                alt="FenixBlack.ai" 
-                className="opacity-70 group-hover:opacity-100 transition-opacity duration-300 group-hover:scale-105 transform"
-              />
-              <span className="text-sm font-medium group-hover:translate-y-[-2px] transition-transform duration-300">
-                Made by FenixBlack.ai
-              </span>
-            </a>
-        </footer>
+    <GrowthKitAccountWidget
+      ref={growthKitRef}
+      config={{
+        publicKey: process.env.NEXT_PUBLIC_GROWTHKIT_PUBLIC_KEY || '',
+        language: locale,
+        theme: 'dark'
+      }}
+      position="top-right"
+      slim={true}
+    >
+      <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4 font-sans">
+        <div className="w-full max-w-2xl mx-auto">
+          <header className="text-center mb-6">
+            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-cyan-400 to-purple-600 text-transparent bg-clip-text">
+              {t('app.title')}
+            </h1>
+            <p className="text-gray-400 mt-2 mb-4">{t('app.description')}</p>
+            <div className="flex justify-center">
+              <LanguageSwitcher />
+            </div>
+          </header>
+          <main className="bg-gray-800/50 backdrop-blur-sm p-6 md:p-8 rounded-2xl shadow-2xl shadow-cyan-500/10 border border-gray-700">
+              {error && <div className="bg-red-500/20 border border-red-500 text-red-300 p-3 rounded-lg mb-4">{error}</div>}
+              {renderStep()}
+          </main>
+           <footer className="text-center mt-8">
+              <a 
+                href="https://www.fenixblack.ai" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex flex-col items-center gap-3 text-gray-400 hover:text-cyan-400 transition-all duration-300 group"
+              >
+                <img 
+                  src="/ave-solo-alpha.png" 
+                  alt="FenixBlack.ai" 
+                  className="opacity-70 group-hover:opacity-100 transition-opacity duration-300 group-hover:scale-105 transform"
+                />
+                <span className="text-sm font-medium group-hover:translate-y-[-2px] transition-transform duration-300">
+                  Made by FenixBlack.ai
+                </span>
+              </a>
+          </footer>
+        </div>
       </div>
-    </div>
+    </GrowthKitAccountWidget>
   );
 }

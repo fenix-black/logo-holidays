@@ -10,6 +10,7 @@ import { CheckIcon } from './icons/CheckIcon';
 import { ArrowLeftIcon } from './icons/ArrowLeftIcon';
 import { DownloadIcon } from './icons/DownloadIcon';
 import { useLocale } from '@/hooks/useLocale';
+import { useGrowthKit } from '@fenixblack/growthkit';
 
 const GUIDING_STYLES = ['Default', 'Cheerful', 'Cute', 'Daylight', 'Vintage', 'Cinematic'];
 
@@ -30,6 +31,7 @@ const Step3ImageGeneration: React.FC<Step3ImageGenerationProps> = ({
   logo, holiday, country, logoAnalysis, selectedStyle, onStyleChange, initialImage, onConfirm, onBack, onRestart 
 }) => {
   const { t, locale } = useLocale();
+  const gk = useGrowthKit();
   const [image, setImage] = useState<ImageDetails | null>(initialImage || null);
   const [jpgImage, setJpgImage] = useState<ImageDetails | null>(null);
   const [conversionInfo, setConversionInfo] = useState<{ratio: number, saved: string} | null>(null);
@@ -116,7 +118,10 @@ const Step3ImageGeneration: React.FC<Step3ImageGenerationProps> = ({
 
   const generateImage = useCallback(async () => {
     // Prevent duplicate requests
-    if (requestInProgressRef.current) return;
+    if (requestInProgressRef.current) {
+      console.log('Image generation already in progress, skipping...');
+      return;
+    }
     requestInProgressRef.current = true;
     
     try {
@@ -124,12 +129,56 @@ const Step3ImageGeneration: React.FC<Step3ImageGenerationProps> = ({
       setError(null);
       setImage(null);
       
+      // Check if user has enough credits
+      if (!gk.canPerformAction('generate_image')) {
+        setError('Not enough credits! Please earn more credits to generate images.');
+        gk.track('insufficient_credits', { 
+          action: 'generate_image',
+          credits_available: gk.credits 
+        });
+        setLoading(false);
+        requestInProgressRef.current = false;
+        // Open share modal to earn credits
+        gk.share();
+        return;
+      }
+      
+      // Track generation start (but don't consume credits yet)
+      gk.track('image_generation_started', { 
+        holiday: holiday.name_en,
+        style: selectedStyle,
+        country: country
+      });
+      
       // Create composite image with logo on canvas
       const composite = await createLogoComposite(logo.b64, logo.mimeType);
       
       // Generate the holiday image with the composite
       const generatedImg = await generateHolidayImage(composite.b64, composite.mimeType, holiday, country, logoAnalysis, selectedStyle);
       setImage(generatedImg);
+      
+      // Only consume credits after successful generation
+      const creditSuccess = await gk.completeAction('generate_image', {
+        usdValue: 0.03
+      });
+      
+      if (!creditSuccess) {
+        // Image was generated but credit consumption failed - log but don't fail the operation
+        console.error('Failed to consume credit after successful generation');
+        gk.track('credit_consumption_failed_post_generation', { 
+          action: 'generate_image',
+          holiday: holiday.name_en,
+          style: selectedStyle
+        });
+      }
+      
+      // Track successful generation
+      gk.track('image_generated', { 
+        holiday: holiday.name_en,
+        style: selectedStyle,
+        country: country,
+        credit_consumed: creditSuccess
+      });
       
       // Convert to JPG for optimization (using higher quality for video generation)
       setConverting(true);
@@ -158,11 +207,16 @@ const Step3ImageGeneration: React.FC<Step3ImageGenerationProps> = ({
       }
     } catch (e: any) {
       setError(e.message || 'An unknown error occurred.');
+      gk.track('image_generation_failed', { 
+        error: e.message,
+        holiday: holiday.name_en,
+        style: selectedStyle
+      });
     } finally {
       setLoading(false);
       requestInProgressRef.current = false;
     }
-  }, [logo.b64, logo.mimeType, holiday, country, logoAnalysis, selectedStyle, createLogoComposite]);
+  }, [logo.b64, logo.mimeType, holiday, country, logoAnalysis, selectedStyle, createLogoComposite, gk]);
 
   useEffect(() => {
     // Generate image if:
@@ -178,12 +232,21 @@ const Step3ImageGeneration: React.FC<Step3ImageGenerationProps> = ({
       }
       generateImage();
     }
-  }, [generateImage, initialImage, selectedStyle]);
+    // Remove generateImage from dependencies to prevent infinite loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialImage, selectedStyle]);
 
   const handleDownloadImage = () => {
     // Prefer JPG version if available for smaller file size
     const imageToDownload = jpgImage || image;
     if (!imageToDownload) return;
+    
+    // Track download event
+    gk.track('image_downloaded', { 
+      holiday: holiday.name_en,
+      style: selectedStyle,
+      format: imageToDownload.mimeType.split('/')[1] || 'png'
+    });
     
     const link = document.createElement('a');
     link.href = `data:${imageToDownload.mimeType};base64,${imageToDownload.b64}`;

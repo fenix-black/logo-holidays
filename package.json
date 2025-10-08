@@ -10,6 +10,7 @@
     "generate-holidays": "npx tsx scripts/generate-holidays.ts"
   },
   "dependencies": {
+    "@fenixblack/growthkit": "^0.6.14",
     "@google/genai": "^1.19.0",
     "next": "14.2.18",
     "react": "^18.3.1",

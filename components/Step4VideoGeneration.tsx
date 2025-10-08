@@ -10,6 +10,7 @@ import { EyeOffIcon } from './icons/EyeOffIcon';
 import { RefreshIcon } from './icons/RefreshIcon';
 import { ArrowLeftIcon } from './icons/ArrowLeftIcon';
 import { useLocale } from '@/hooks/useLocale';
+import { useGrowthKit } from '@fenixblack/growthkit';
 
 interface Step4VideoGenerationProps {
   image: ImageDetails;
@@ -22,6 +23,7 @@ interface Step4VideoGenerationProps {
 
 const Step4VideoGeneration: React.FC<Step4VideoGenerationProps> = ({ image, holiday, country, selectedStyle, onBack, onRestart }) => {
   const { t } = useLocale();
+  const gk = useGrowthKit();
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoPrompt, setVideoPrompt] = useState('');
   const [refinementScript, setRefinementScript] = useState('');
@@ -37,13 +39,36 @@ const Step4VideoGeneration: React.FC<Step4VideoGenerationProps> = ({ image, holi
     t('step4.processing'),
   ], [t]);
   
-  const handleVideoGeneration = useCallback(async (prompt: string) => {
+  const handleVideoGeneration = useCallback(async (prompt: string, isRetry: boolean = false) => {
     setLoading(true);
     setError(null);
     setVideoUrl(null);
     setProgress(0);
 
     try {
+        // Only check credits if this is not a retry
+        if (!isRetry) {
+          // Check if user has enough credits
+          if (!gk.canPerformAction('generate_video')) {
+            setError('Not enough credits! Please earn more credits to generate videos.');
+            gk.track('insufficient_credits', { 
+              action: 'generate_video',
+              credits_available: gk.credits 
+            });
+            setLoading(false);
+            // Open share modal to earn credits
+            gk.share();
+            return;
+          }
+          
+          // Track generation start (but don't consume credits yet)
+          gk.track('video_generation_started', { 
+            holiday: holiday.name_en,
+            style: selectedStyle,
+            country: country
+          });
+        }
+        
         const url = await generateVideo(
             image.b64, 
             image.mimeType, 
@@ -62,16 +87,56 @@ const Step4VideoGeneration: React.FC<Step4VideoGenerationProps> = ({ image, holi
         );
         setVideoUrl(url);
         setProgress(100);
+        
+        // Only consume credits after successful generation (and not on retry)
+        if (!isRetry) {
+          const creditSuccess = await gk.completeAction('generate_video', {
+            usdValue: 0.30
+          });
+          
+          if (!creditSuccess) {
+            // Video was generated but credit consumption failed - log but don't fail the operation
+            console.error('Failed to consume credit after successful video generation');
+            gk.track('credit_consumption_failed_post_generation', { 
+              action: 'generate_video',
+              holiday: holiday.name_en,
+              style: selectedStyle
+            });
+          }
+          
+          // Track successful generation
+          gk.track('video_generated', { 
+            holiday: holiday.name_en,
+            style: selectedStyle,
+            country: country,
+            credit_consumed: creditSuccess
+          });
+        } else {
+          // Track successful retry
+          gk.track('video_retry_successful', { 
+            holiday: holiday.name_en,
+            style: selectedStyle,
+            country: country
+          });
+        }
     } catch(e: any) {
         setError(e.message || "Failed to generate video.");
+        gk.track('video_generation_failed', { 
+          error: e.message,
+          holiday: holiday.name_en,
+          style: selectedStyle
+        });
     } finally {
         setLoading(false);
     }
-  }, [image.b64, image.mimeType, t]);
+  }, [image.b64, image.mimeType, t, gk, holiday, selectedStyle, country]);
   
   const getInitialPromptAndVideo = useCallback(async () => {
     // Prevent duplicate requests
-    if (requestInProgressRef.current) return;
+    if (requestInProgressRef.current) {
+      console.log('Video generation already in progress, skipping...');
+      return;
+    }
     requestInProgressRef.current = true;
     
     setLoading(true);
@@ -98,21 +163,45 @@ const Step4VideoGeneration: React.FC<Step4VideoGenerationProps> = ({ image, holi
 
   useEffect(() => {
     getInitialPromptAndVideo();
-  }, [getInitialPromptAndVideo]);
+    // Remove getInitialPromptAndVideo from dependencies to prevent infinite loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleApplyChanges = async () => {
     if (!refinementScript.trim()) {
       setError('Please provide instructions for refinement');
       return;
     }
+    
+    // Check if user has enough credits for refinement
+    if (!gk.canPerformAction('refine_video')) {
+      setError('Not enough credits! Please earn more credits to refine videos.');
+      gk.track('insufficient_credits', { 
+        action: 'refine_video',
+        credits_available: gk.credits 
+      });
+      // Open share modal to earn credits
+      gk.share();
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     setLoadingMessage('Refining animation script...');
     try {
+      // Track refinement request
+      gk.track('video_refinement_requested', { 
+        holiday: holiday.name_en,
+        instructions: refinementScript
+      });
+      
       const newPrompt = await refineVideoPromptJson(videoPrompt, refinementScript);
       setVideoPrompt(newPrompt);
       setRefinementScript(''); // Clear input after submission
-      await handleVideoGeneration(newPrompt);
+      
+      // Don't pass isRetry=false to avoid double credit consumption
+      // handleVideoGeneration will consume credits only after successful generation
+      await handleVideoGeneration(newPrompt, false);
     } catch (e: any) {
       setError(e.message || 'Failed to apply changes.');
       setLoading(false);
@@ -121,6 +210,13 @@ const Step4VideoGeneration: React.FC<Step4VideoGenerationProps> = ({ image, holi
   
   const handleDownload = () => {
     if (!videoUrl) return;
+    
+    // Track download event
+    gk.track('video_downloaded', { 
+      holiday: holiday.name_en,
+      style: selectedStyle
+    });
+    
     const link = document.createElement('a');
     link.href = videoUrl;
     link.download = `logo-${holiday.name_en.toLowerCase().replace(/\s/g, '-')}-${selectedStyle.toLowerCase()}.mp4`;
@@ -160,12 +256,14 @@ const Step4VideoGeneration: React.FC<Step4VideoGenerationProps> = ({ image, holi
         {error && !loading && (
           <div className="flex flex-col items-center justify-center gap-4 p-4 text-center">
             <p className="text-red-400">{error}</p>
-            <button
-              onClick={() => handleVideoGeneration(videoPrompt)}
-              className="w-auto flex items-center justify-center gap-2 px-6 py-2 border border-yellow-500 text-base font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 ring-offset-gray-900 focus:ring-yellow-500 transition-all"
-            >
-              <RefreshIcon /> Retry
-            </button>
+            {videoPrompt && !error.includes('credits') && (
+              <button
+                onClick={() => handleVideoGeneration(videoPrompt, true)}
+                className="w-auto flex items-center justify-center gap-2 px-6 py-2 border border-yellow-500 text-base font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 ring-offset-gray-900 focus:ring-yellow-500 transition-all"
+              >
+                <RefreshIcon /> Retry
+              </button>
+            )}
           </div>
         )}
         {videoUrl && !loading && (
