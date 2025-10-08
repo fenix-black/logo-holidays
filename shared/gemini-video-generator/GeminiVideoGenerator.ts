@@ -205,6 +205,11 @@ export class GeminiVideoGenerator {
     
     console.log(`Gemini operation ${operationName} status: ${operation.done ? 'completed' : 'processing'}`);
     
+    // Check for content policy violations when operation completes
+    if (operation.done && operation.response?.generateVideoResponse?.raiMediaFilteredCount > 0) {
+      console.log('Video generation blocked by content policy:', operation.response.generateVideoResponse.raiMediaFilteredReasons);
+    }
+    
     if (operation.error) {
       console.error('Gemini video generation error:', operation.error);
       

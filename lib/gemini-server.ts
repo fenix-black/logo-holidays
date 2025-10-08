@@ -275,13 +275,13 @@ export const generateHolidayImage = async (
             ? `The overall mood and aesthetic must be strongly influenced by this guiding style: **${style}**.`
             : `The style should be a standard, photorealistic festive representation.`;
 
-        const textPrompt = `⛔ STRICT AGE POLICY: Generate ONLY adults (18+). Absolutely NO children, babies, toddlers, or minors allowed.
+        const textPrompt = `⛔ EXTREME AGE RESTRICTIONS: Generate ONLY fully-grown adults (25+ years old). ZERO tolerance for children, minors, teens, or young-looking people.
 
 Create a cinematic, professional scene celebrating '${holiday.name_en}' in ${country}. 
 
 SCENE COMPOSITION:
 - Setting: ${holiday.locations} during ${holiday.timeOfDay}
-- Activities: Show ${holiday.activities} in progress
+- Activities: Show ${holiday.activities} in progress (performed by mature adults only)
 - Visual Elements: Feature ${holiday.visualSymbols} and ${holiday.elements}
 - Color Palette: Use ${holiday.colorPalette} as the dominant color scheme
 - Style: The scene should complement the logo's style: '${logoAnalysis}'
@@ -297,32 +297,41 @@ CRITICAL REQUIREMENTS:
    - Integrated naturally into the scene as if it belongs there
    - Do NOT repeat the logo excessively or create patterns with it
 
-3. **PEOPLE & AGE RESTRICTIONS**:
-   ⚠️ ABSOLUTELY NO CHILDREN, MINORS, OR YOUNG PEOPLE UNDER 18
-   - The scene must ONLY feature ADULTS (18+ years old) if any people are shown
-   - All people must have clearly adult features and mature appearance
-   - NO babies, toddlers, children, teenagers, or anyone who could appear underage
-   - When depicting families, show ONLY adult family members (parents, grandparents, adult siblings)
-   - For festive crowds, ensure ALL individuals are clearly adults
+3. **ADULT-ONLY PEOPLE POLICY**:
+   🚫 ZERO CHILDREN, MINORS, TEENS, OR YOUNG-LOOKING PEOPLE
+   - If showing people: ONLY mature adults (25+ years old) with clearly adult features
+   - Adult faces must have mature characteristics: defined jawlines, adult proportions
+   - If depicting families: show "adult family gatherings" (parents 30+, grandparents, adult children 25+)
+   - Multi-generational = adults of different ages (30s, 40s, 50s+), NOT children
+   - Holiday crowds = mature adult celebrations, professional gatherings, adult communities
+   - NO baby faces, childlike features, small statures, or youthful appearances
 
 4. **CULTURAL AUTHENTICITY**:
    - Location must reflect: ${holiday.locations}
    - Time setting must be: ${holiday.timeOfDay}
    - If ADULT people are shown, they MUST wear: "${holiday.clothing}"
    - Cultural elements must be accurate and respectful
-   - Focus on adult participants in traditional celebrations
+   - Focus on mature adult participants in traditional celebrations
 
 5. **VISUAL QUALITY**:
    - Cinematic lighting appropriate for ${holiday.timeOfDay}
    - Professional composition with depth and atmosphere
    - If adults are depicted, faces must be realistic with natural expressions
-   - Mature, sophisticated visual treatment
+   - Mature, sophisticated visual treatment befitting adult celebrations
 
 6. ${flagInstruction}
 
 7. **CANVAS CONFORMITY**: The output MUST match the exact 16:9 dimensions of the provided input image (1920x1080).
 
-FINAL REMINDER: Only generate adults (no children). Display logo in 1-2 natural locations only.`;
+🚫 ABSOLUTE PROHIBITIONS:
+- NO children, babies, toddlers, kids, minors, teenagers, young people, or anyone under 25
+- NO small people, childlike faces, baby features, youthful appearances
+- NO family scenes with children, parent-child interactions, or kid-focused activities
+- NO school-age people, young adults, college-age, or anyone who looks young
+- NO cute, innocent, or childlike elements that might imply minors
+- When showing "families": ONLY show adult relatives (parents 30+, grandparents, adult siblings 25+)
+
+FINAL ENFORCEMENT: This scene represents MATURE ADULT celebrations only. Zero tolerance for minors.`;
         
         // The composite image already contains the logo on a 16:9 canvas
         // This enforces the aspect ratio while giving Gemini full freedom to reposition the logo
